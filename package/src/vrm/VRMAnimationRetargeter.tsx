@@ -8,6 +8,8 @@ import type {
   VRMAnimationRetargeterProps,
   VRMExpressionRetargetBinding,
   VRMExpressionMaterialColorRetargetBinding,
+  VRMExpressionOverrideRetargetBinding,
+  VRMExpressionOverrideType,
   VRMExpressionTextureTransformRetargetBinding,
   VRMLookAtBoneRetargetBinding,
   VRMLookAtExpressionRetargetBinding,
@@ -121,6 +123,78 @@ function scaleMat3f(matrix: Mat3f, scale: number): Mat3f {
   return [matrix[0] * scale, matrix[1] * scale, matrix[2] * scale, matrix[3] * scale, matrix[4] * scale, matrix[5] * scale, matrix[6] * scale, matrix[7] * scale, matrix[8] * scale]
 }
 
+function clamp01(value: number): number {
+  'worklet'
+  return Math.max(0, Math.min(1, value))
+}
+
+function getExpressionOverrideCategory(expressionName: string): 'blink' | 'lookAt' | 'mouth' | undefined {
+  'worklet'
+  if (expressionName === 'aa' || expressionName === 'ih' || expressionName === 'ou' || expressionName === 'ee' || expressionName === 'oh') return 'mouth'
+  if (expressionName === 'blink' || expressionName === 'blinkLeft' || expressionName === 'blinkRight') return 'blink'
+  if (expressionName === 'lookUp' || expressionName === 'lookDown' || expressionName === 'lookLeft' || expressionName === 'lookRight') return 'lookAt'
+  return undefined
+}
+
+function getExpressionOverrideMode(
+  binding: VRMExpressionOverrideRetargetBinding,
+  category: 'blink' | 'lookAt' | 'mouth'
+): VRMExpressionOverrideType {
+  'worklet'
+  if (category === 'blink') return binding.overrideBlink
+  if (category === 'lookAt') return binding.overrideLookAt
+  return binding.overrideMouth
+}
+
+function getExpressionOutputWeight(binding: VRMExpressionOverrideRetargetBinding, transformManager: ReturnType<typeof useFilamentContext>['transformManager']): number {
+  'worklet'
+  const sourceTransform = transformManager.getTransform(binding.source)
+  const inputWeight = clamp01(sourceTransform.translation[0])
+  if (!binding.isBinary) return inputWeight
+  return inputWeight >= 0.5 ? 1 : 0
+}
+
+function getExpressionOverrideFactor(
+  expressionName: string,
+  isBinary: boolean,
+  overrideBindings: VRMExpressionOverrideRetargetBinding[],
+  transformManager: ReturnType<typeof useFilamentContext>['transformManager']
+): number {
+  'worklet'
+  const category = getExpressionOverrideCategory(expressionName)
+  if (category == null) return 1
+
+  let blendWeight = 0
+  for (const binding of overrideBindings) {
+    if (getExpressionOverrideCategory(binding.expressionName) === category) continue
+
+    const mode = getExpressionOverrideMode(binding, category)
+    if (mode !== 'block' && mode !== 'blend') continue
+
+    const weight = getExpressionOutputWeight(binding, transformManager)
+    if (weight <= 0) continue
+
+    if (isBinary || mode === 'block') return 0
+    blendWeight += weight
+  }
+
+  return 1 - clamp01(blendWeight)
+}
+
+function getExpressionWeight(
+  expressionName: string,
+  source: Entity,
+  overrideBindings: VRMExpressionOverrideRetargetBinding[],
+  transformManager: ReturnType<typeof useFilamentContext>['transformManager']
+): number {
+  'worklet'
+  const overrideBinding = overrideBindings.find((binding) => binding.expressionName === expressionName)
+  const sourceTransform = transformManager.getTransform(source)
+  const inputWeight = clamp01(sourceTransform.translation[0])
+  const outputWeight = overrideBinding?.isBinary === true ? (inputWeight >= 0.5 ? 1 : 0) : inputWeight
+  return outputWeight * getExpressionOverrideFactor(expressionName, overrideBinding?.isBinary === true, overrideBindings, transformManager)
+}
+
 function getLookAtAngles(rotation: [number, number, number, number]): { pitchDegrees: number; yawDegrees: number } {
   'worklet'
   const [x, y, z, w] = rotation
@@ -196,6 +270,7 @@ export function VRMAnimationRetargeter({
   expressionBindings = [],
   expressionMaterialColorBindings = [],
   expressionTextureTransformBindings = [],
+  expressionOverrideBindings = [],
   lookAtBoneBindings = [],
   lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
@@ -278,13 +353,14 @@ export function VRMAnimationRetargeter({
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
-    return expressionBindings.flatMap(({ sourceName, targetName, morphTargetIndex, weight }) => {
+    return expressionBindings.flatMap(({ expressionName, sourceName, targetName, morphTargetIndex, weight }) => {
       const source = sourceEntities.get(sourceName)
       const target = targetEntities.get(targetName)
       if (source == null || target == null) return []
 
       return [
         {
+          expressionName,
           source,
           target,
           morphTargetIndex,
@@ -298,7 +374,7 @@ export function VRMAnimationRetargeter({
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
-    return expressionMaterialColorBindings.flatMap(({ baseValue, parameterName, primitiveIndex, sourceName, targetName, targetValue }) => {
+    return expressionMaterialColorBindings.flatMap(({ baseValue, expressionName, parameterName, primitiveIndex, sourceName, targetName, targetValue }) => {
       const source = sourceEntities.get(sourceName)
       const target = targetEntities.get(targetName)
       if (source == null || target == null) return []
@@ -306,6 +382,7 @@ export function VRMAnimationRetargeter({
       return [
         {
           baseValue,
+          expressionName,
           parameterName,
           primitiveIndex,
           source,
@@ -320,7 +397,7 @@ export function VRMAnimationRetargeter({
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
-    return expressionTextureTransformBindings.flatMap(({ baseValue, primitiveIndex, sourceName, targetName, targetValue }) => {
+    return expressionTextureTransformBindings.flatMap(({ baseValue, expressionName, primitiveIndex, sourceName, targetName, targetValue }) => {
       const source = sourceEntities.get(sourceName)
       const target = targetEntities.get(targetName)
       if (source == null || target == null) return []
@@ -328,6 +405,7 @@ export function VRMAnimationRetargeter({
       return [
         {
           baseValue,
+          expressionName,
           primitiveIndex,
           source,
           target,
@@ -336,6 +414,26 @@ export function VRMAnimationRetargeter({
       ]
     })
   }, [expressionTextureTransformBindings, nameComponentManager, sourceAsset, targetModel])
+
+  const retargetExpressionOverrideBindings = React.useMemo<VRMExpressionOverrideRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return expressionOverrideBindings.flatMap(({ expressionName, isBinary, overrideBlink, overrideLookAt, overrideMouth, sourceName }) => {
+      const source = sourceEntities.get(sourceName)
+      if (source == null) return []
+
+      return [
+        {
+          expressionName,
+          isBinary,
+          overrideBlink,
+          overrideLookAt,
+          overrideMouth,
+          source,
+        },
+      ]
+    })
+  }, [expressionOverrideBindings, nameComponentManager, sourceAsset])
 
   const retargetLookAtBoneBindings = React.useMemo<VRMLookAtBoneRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -364,7 +462,7 @@ export function VRMAnimationRetargeter({
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
     return lookAtExpressionBindings.flatMap(
-      ({ sourceName, targetName, direction, morphTargetIndex, weight, inputMaxValue, outputScale }) => {
+      ({ sourceName, targetName, direction, expressionName, isBinary, morphTargetIndex, weight, inputMaxValue, outputScale }) => {
         const source = sourceEntities.get(sourceName)
         const target = targetEntities.get(targetName)
         if (source == null || target == null) return []
@@ -374,6 +472,8 @@ export function VRMAnimationRetargeter({
             source,
             target,
             direction,
+            expressionName,
+            isBinary,
             morphTargetIndex,
             weight,
             inputMaxValue,
@@ -473,6 +573,7 @@ export function VRMAnimationRetargeter({
           retargetExpressionBindings.length === 0 &&
           retargetExpressionMaterialColorBindings.length === 0 &&
           retargetExpressionTextureTransformBindings.length === 0 &&
+          retargetExpressionOverrideBindings.length === 0 &&
           retargetLookAtBoneBindings.length === 0 &&
           retargetLookAtExpressionBindings.length === 0 &&
           retargetNodeConstraintBindings.length === 0 &&
@@ -613,9 +714,24 @@ export function VRMAnimationRetargeter({
       }
 
       for (const binding of retargetExpressionBindings) {
-        const sourceTransform = transformManager.getTransform(binding.source)
-        const weight = Math.max(0, Math.min(1, sourceTransform.translation[0])) * binding.weight
-        renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
+        let alreadyApplied = false
+        for (const previous of retargetExpressionBindings) {
+          if (previous === binding) break
+          if (previous.target === binding.target && previous.morphTargetIndex === binding.morphTargetIndex) {
+            alreadyApplied = true
+            break
+          }
+        }
+        if (alreadyApplied) continue
+
+        let weight = 0
+        for (const candidate of retargetExpressionBindings) {
+          if (candidate.target !== binding.target || candidate.morphTargetIndex !== binding.morphTargetIndex) {
+            continue
+          }
+          weight += getExpressionWeight(candidate.expressionName, candidate.source, retargetExpressionOverrideBindings, transformManager) * candidate.weight
+        }
+        renderableManager.setMorphWeights(binding.target, [clamp01(weight)], binding.morphTargetIndex)
       }
 
       for (let index = 0; index < retargetExpressionMaterialColorBindings.length; index++) {
@@ -646,8 +762,7 @@ export function VRMAnimationRetargeter({
             continue
           }
 
-          const sourceTransform = transformManager.getTransform(candidate.source)
-          const weight = Math.max(0, Math.min(1, sourceTransform.translation[0]))
+          const weight = getExpressionWeight(candidate.expressionName, candidate.source, retargetExpressionOverrideBindings, transformManager)
           value = addFloat4(value, scaleFloat4(subFloat4(candidate.targetValue, candidate.baseValue), weight))
         }
 
@@ -675,8 +790,7 @@ export function VRMAnimationRetargeter({
             continue
           }
 
-          const sourceTransform = transformManager.getTransform(candidate.source)
-          const weight = Math.max(0, Math.min(1, sourceTransform.translation[0]))
+          const weight = getExpressionWeight(candidate.expressionName, candidate.source, retargetExpressionOverrideBindings, transformManager)
           value = addMat3f(value, scaleMat3f(subMat3f(candidate.targetValue, candidate.baseValue), weight))
         }
 
@@ -690,7 +804,11 @@ export function VRMAnimationRetargeter({
         const sourceTransform = transformManager.getTransform(binding.source)
         const { pitchDegrees, yawDegrees } = getLookAtAngles(sourceTransform.rotationQuaternion)
         const angle = getLookAtWeight(binding.direction, pitchDegrees, yawDegrees)
-        const weight = Math.max(0, Math.min(1, angle / binding.inputMaxValue)) * binding.outputScale * binding.weight
+        const weight =
+          clamp01(angle / binding.inputMaxValue) *
+          binding.outputScale *
+          binding.weight *
+          getExpressionOverrideFactor(binding.expressionName, binding.isBinary, retargetExpressionOverrideBindings, transformManager)
         renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
       }
 
@@ -714,6 +832,7 @@ export function VRMAnimationRetargeter({
       retargetExpressionBindings,
       retargetExpressionMaterialColorBindings,
       retargetExpressionTextureTransformBindings,
+      retargetExpressionOverrideBindings,
       retargetLookAtBoneBindings,
       retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,

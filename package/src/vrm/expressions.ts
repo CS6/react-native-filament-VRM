@@ -3,6 +3,8 @@ import type {
   VRMExpressionBinding,
   VRMExpressionMaterialColorBindType,
   VRMExpressionMaterialColorBinding,
+  VRMExpressionOverrideBinding,
+  VRMExpressionOverrideType,
   VRMExpressionTextureTransformBinding,
   VRMGltfJson,
 } from './types'
@@ -89,6 +91,10 @@ function getMaterialBaseColor(gltf: VRMGltfJson, materialIndex: number | undefin
 
 function createTextureTransformMatrix(offset: [number, number] | undefined, scale: [number, number] | undefined): Mat3f {
   return [scale?.[0] ?? 1, 0, 0, 0, scale?.[1] ?? 1, 0, offset?.[0] ?? 0, offset?.[1] ?? 0, 1]
+}
+
+function getOverrideType(type: VRMExpressionOverrideType | undefined): VRMExpressionOverrideType {
+  return type === 'block' || type === 'blend' ? type : 'none'
 }
 
 export function getVRMAExpressionNodeNames(gltf: VRMGltfJson): Record<string, string> {
@@ -217,6 +223,31 @@ export function createVRMExpressionTextureTransformBindings(sourceGltf: VRMGltfJ
         })
       }
     }
+  }
+
+  return bindings
+}
+
+export function createVRMExpressionOverrideBindings(sourceGltf: VRMGltfJson, targetGltf: VRMGltfJson): VRMExpressionOverrideBinding[] {
+  const sourceNames = getVRMAExpressionNodeNames(sourceGltf)
+  const bindings: VRMExpressionOverrideBinding[] = []
+  const vrm1Expressions = targetGltf.extensions?.VRMC_vrm?.expressions
+
+  for (const [expressionName, expression] of Object.entries({
+    ...(vrm1Expressions?.preset ?? {}),
+    ...(vrm1Expressions?.custom ?? {}),
+  })) {
+    const sourceName = sourceNames[expressionName]
+    if (sourceName == null) continue
+
+    bindings.push({
+      expressionName,
+      isBinary: expression?.isBinary === true,
+      overrideBlink: getOverrideType(expression?.overrideBlink),
+      overrideLookAt: getOverrideType(expression?.overrideLookAt),
+      overrideMouth: getOverrideType(expression?.overrideMouth),
+      sourceName,
+    })
   }
 
   return bindings

@@ -55,6 +55,7 @@ function Avatar() {
           expressionBindings={animation.retargeting.expressionBindings}
           expressionMaterialColorBindings={animation.retargeting.expressionMaterialColorBindings}
           expressionTextureTransformBindings={animation.retargeting.expressionTextureTransformBindings}
+          expressionOverrideBindings={animation.retargeting.expressionOverrideBindings}
           lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
@@ -98,6 +99,7 @@ function Avatar() {
           expressionBindings={animation.retargeting.expressionBindings}
           expressionMaterialColorBindings={animation.retargeting.expressionMaterialColorBindings}
           expressionTextureTransformBindings={animation.retargeting.expressionTextureTransformBindings}
+          expressionOverrideBindings={animation.retargeting.expressionOverrideBindings}
           lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
@@ -173,7 +175,14 @@ The retargeter applies morph target weights each frame through Filament's render
 
 `useVRMAnimation` also returns `expressionTextureTransformBindings` for VRM 1.0 `textureTransformBinds`. The retargeter applies the accumulated transform to every sampler transform parameter exposed by the material instance, using Filament's native sampler transform metadata instead of guessing parameter names.
 
-Expression override rules are not applied yet.
+`useVRMAnimation` also returns `expressionOverrideBindings` for VRM 1.0 procedural override rules. The retargeter applies `overrideBlink`, `overrideLookAt`, and `overrideMouth` before morph, material color, texture transform, and expression-based LookAt values are accumulated:
+
+- `overrideMouth` affects `aa`, `ih`, `ou`, `ee`, and `oh`.
+- `overrideBlink` affects `blink`, `blinkLeft`, and `blinkRight`.
+- `overrideLookAt` affects `lookUp`, `lookDown`, `lookLeft`, and `lookRight`.
+- `block` suppresses the target procedural expression while the overriding expression is active.
+- `blend` linearly attenuates the target procedural expression by the accumulated overriding expression output weight.
+- `isBinary` is evaluated before override effects are applied, matching the VRM 1.0 expression specification.
 
 ## LookAt
 
@@ -207,4 +216,4 @@ Seed-san uses this for hair springs and the `RoboWire` chain behind the mechanic
 
 ## Known gaps
 
-The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression material color binds, VRM 1.0 expression texture transform binds, VRM 1.0 expression-based LookAt, VRM 1.0/0.x bone-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for expression override rules.
+The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights and override rules, VRM 1.0 expression material color binds, VRM 1.0 expression texture transform binds, VRM 1.0 expression-based LookAt, VRM 1.0/0.x bone-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires broader validation against more official and third-party VRM 1.0 assets, especially models with non-humanoid accessory rigs driven by spring bones and constraints.

@@ -42,7 +42,8 @@ export function createVRMLookAtExpressionBindings(sourceGltf: VRMGltfJson, targe
   const bindings: VRMLookAtExpressionBinding[] = []
 
   for (const direction of Object.keys(LOOK_AT_EXPRESSION_NAMES) as Array<keyof typeof LOOK_AT_EXPRESSION_NAMES>) {
-    const expression = targetExpressions[LOOK_AT_EXPRESSION_NAMES[direction]]
+    const expressionName = LOOK_AT_EXPRESSION_NAMES[direction]
+    const expression = targetExpressions[expressionName]
     for (const bind of expression?.morphTargetBinds ?? []) {
       const targetName = getNodeName(targetGltf, bind.node)
       if (targetName == null || bind.index == null) continue
@@ -50,6 +51,8 @@ export function createVRMLookAtExpressionBindings(sourceGltf: VRMGltfJson, targe
       bindings.push({
         sourceName,
         direction,
+        expressionName,
+        isBinary: expression?.isBinary === true,
         targetName,
         morphTargetIndex: bind.index,
         weight: bind.weight ?? 1,

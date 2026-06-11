@@ -214,7 +214,21 @@ export interface VRMExpressionDefinition {
   isBinary?: boolean
   materialColorBinds?: VRMExpressionMaterialColorBind[]
   morphTargetBinds?: VRMExpressionMorphTargetBind[]
+  overrideBlink?: VRMExpressionOverrideType
+  overrideLookAt?: VRMExpressionOverrideType
+  overrideMouth?: VRMExpressionOverrideType
   textureTransformBinds?: VRMExpressionTextureTransformBind[]
+}
+
+export type VRMExpressionOverrideType = 'none' | 'block' | 'blend' | string
+
+export interface VRMExpressionOverrideBinding {
+  expressionName: string
+  isBinary: boolean
+  overrideBlink: VRMExpressionOverrideType
+  overrideLookAt: VRMExpressionOverrideType
+  overrideMouth: VRMExpressionOverrideType
+  sourceName: string
 }
 
 export interface VRMExpressionMorphTargetBind {
@@ -287,6 +301,8 @@ export interface VRM0LookAtRangeMap {
 export interface VRMLookAtExpressionBinding {
   sourceName: string
   direction: 'left' | 'right' | 'up' | 'down'
+  expressionName: string
+  isBinary: boolean
   targetName: string
   morphTargetIndex: number
   weight: number
@@ -490,6 +506,7 @@ export interface VRMRetargetSource {
 }
 
 export interface VRMExpressionRetargetBinding {
+  expressionName: string
   source: Entity
   target: Entity
   morphTargetIndex: number
@@ -498,6 +515,7 @@ export interface VRMExpressionRetargetBinding {
 
 export interface VRMExpressionMaterialColorRetargetBinding {
   baseValue: Float4
+  expressionName: string
   parameterName: string
   primitiveIndex: number
   source: Entity
@@ -507,15 +525,27 @@ export interface VRMExpressionMaterialColorRetargetBinding {
 
 export interface VRMExpressionTextureTransformRetargetBinding {
   baseValue: Mat3f
+  expressionName: string
   primitiveIndex: number
   source: Entity
   target: Entity
   targetValue: Mat3f
 }
 
+export interface VRMExpressionOverrideRetargetBinding {
+  expressionName: string
+  isBinary: boolean
+  overrideBlink: VRMExpressionOverrideType
+  overrideLookAt: VRMExpressionOverrideType
+  overrideMouth: VRMExpressionOverrideType
+  source: Entity
+}
+
 export interface VRMLookAtExpressionRetargetBinding {
   source: Entity
   direction: 'left' | 'right' | 'up' | 'down'
+  expressionName: string
+  isBinary: boolean
   target: Entity
   morphTargetIndex: number
   weight: number
@@ -591,6 +621,7 @@ export interface VRMAnimationRetargeterProps {
   expressionBindings?: VRMExpressionBinding[]
   expressionMaterialColorBindings?: VRMExpressionMaterialColorBinding[]
   expressionTextureTransformBindings?: VRMExpressionTextureTransformBinding[]
+  expressionOverrideBindings?: VRMExpressionOverrideBinding[]
   lookAtBoneBindings?: VRMLookAtBoneBinding[]
   lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
@@ -605,6 +636,7 @@ export interface VRMAnimationRetargeting {
   expressionBindings: VRMExpressionBinding[]
   expressionMaterialColorBindings: VRMExpressionMaterialColorBinding[]
   expressionTextureTransformBindings: VRMExpressionTextureTransformBinding[]
+  expressionOverrideBindings: VRMExpressionOverrideBinding[]
   lookAtBoneBindings: VRMLookAtBoneBinding[]
   lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]
