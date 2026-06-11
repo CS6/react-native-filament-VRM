@@ -1,26 +1,89 @@
 import * as React from 'react'
+import { useSharedValue } from 'react-native-worklets-core'
 import { RenderCallbackContext } from '../react/RenderCallbackContext'
 import { useAnimator } from '../hooks/useAnimator'
 import { useFilamentContext } from '../hooks/useFilamentContext'
-import type { Entity } from '../types'
+import type { Entity, Float3, Float4 } from '../types'
 import type {
   VRMAnimationRetargeterProps,
   VRMExpressionRetargetBinding,
   VRMLookAtExpressionRetargetBinding,
   VRMNodeConstraintRetargetBinding,
   VRMRetargetBinding,
+  VRMSpringBoneColliderRetargetBinding,
+  VRMSpringBoneRetargetBinding,
 } from './types'
 import {
   denormalizeLocalRotation,
   flipVRM0NormalizedRotation,
+  invertQuat,
   multiplyQuat,
   normalizeLocalRotation,
+  quatFromUnitVectors,
   retargetRotationConstraint,
+  rotateVectorByQuat,
   scaleTranslationDelta,
 } from './retargeting'
 
+type VRMSpringBoneState = Record<string, { previousTail: Float3; tail: Float3 }>
+
 function getEntityMap(entities: Entity[], getEntityName: (entity: Entity) => string | undefined) {
   return new Map(entities.map((entity) => [getEntityName(entity), entity]))
+}
+
+function addVec3(a: Float3, b: Float3): Float3 {
+  'worklet'
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+function subVec3(a: Float3, b: Float3): Float3 {
+  'worklet'
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+function scaleVec3(vector: Float3, scale: number): Float3 {
+  'worklet'
+  return [vector[0] * scale, vector[1] * scale, vector[2] * scale]
+}
+
+function dotVec3(a: Float3, b: Float3): number {
+  'worklet'
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+function lengthVec3(vector: Float3): number {
+  'worklet'
+  return Math.hypot(vector[0], vector[1], vector[2])
+}
+
+function normalizeVec3(vector: Float3, fallback: Float3 = [0, 1, 0]): Float3 {
+  'worklet'
+  const length = lengthVec3(vector)
+  if (length <= 0.000001) return fallback
+  return [vector[0] / length, vector[1] / length, vector[2] / length]
+}
+
+function transformPoint(translation: Float3, rotation: Float4, scale: Float3, point: Float3): Float3 {
+  'worklet'
+  return addVec3(translation, rotateVectorByQuat([point[0] * scale[0], point[1] * scale[1], point[2] * scale[2]], rotation))
+}
+
+function closestPointOnSegment(point: Float3, a: Float3, b: Float3): Float3 {
+  'worklet'
+  const ab = subVec3(b, a)
+  const denominator = dotVec3(ab, ab)
+  if (denominator <= 0.000001) return a
+  const t = Math.max(0, Math.min(1, dotVec3(subVec3(point, a), ab) / denominator))
+  return addVec3(a, scaleVec3(ab, t))
+}
+
+function pushOutFromSphere(point: Float3, center: Float3, radius: number): Float3 {
+  'worklet'
+  const offset = subVec3(point, center)
+  const distance = lengthVec3(offset)
+  if (distance >= radius || radius <= 0) return point
+  const direction: Float3 = distance > 0.000001 ? scaleVec3(offset, 1 / distance) : [0, 1, 0]
+  return addVec3(center, scaleVec3(direction, radius))
 }
 
 function getLookAtAngles(rotation: [number, number, number, number]): { pitchDegrees: number; yawDegrees: number } {
@@ -51,6 +114,7 @@ export function VRMAnimationRetargeter({
   expressionBindings = [],
   lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
+  springBoneBindings = [],
   animationIndex = 0,
   enabled = true,
   targetVersion,
@@ -58,6 +122,7 @@ export function VRMAnimationRetargeter({
   const sourceAnimator = useAnimator(sourceAsset)
   const targetAnimator = useAnimator(targetModel)
   const { nameComponentManager, renderableManager, transformManager } = useFilamentContext()
+  const springBoneState = useSharedValue<VRMSpringBoneState>({})
 
   const retargetBindings = React.useMemo<VRMRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -192,8 +257,60 @@ export function VRMAnimationRetargeter({
     })
   }, [nameComponentManager, nodeConstraintBindings, targetModel, transformManager])
 
+  const retargetSpringBoneBindings = React.useMemo<VRMSpringBoneRetargetBinding[]>(() => {
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return springBoneBindings.flatMap(({ name, centerName, joints, colliders }) => {
+      const runtimeJoints = joints.flatMap(
+        ({ nodeName, childName, parentName, dragForce, gravityDir, gravityPower, hitRadius, stiffness }) => {
+          const node = targetEntities.get(nodeName)
+          const child = targetEntities.get(childName)
+          const parent = parentName == null ? undefined : targetEntities.get(parentName)
+          if (node == null || child == null) return []
+
+          return [
+            {
+              node,
+              child,
+              parent,
+              nodeName,
+              childName,
+              dragForce,
+              gravityDir,
+              gravityPower,
+              hitRadius,
+              stiffness,
+            },
+          ]
+        }
+      )
+      if (runtimeJoints.length === 0) return []
+
+      const runtimeColliders: VRMSpringBoneColliderRetargetBinding[] = []
+      for (const collider of colliders) {
+        const node = targetEntities.get(collider.nodeName)
+        if (node == null) continue
+
+        if (collider.type === 'sphere') {
+          runtimeColliders.push({ node, type: 'sphere', offset: collider.offset, radius: collider.radius })
+          continue
+        }
+        runtimeColliders.push({ node, type: 'capsule', offset: collider.offset, radius: collider.radius, tail: collider.tail })
+      }
+
+      return [
+        {
+          name,
+          center: centerName == null ? undefined : targetEntities.get(centerName),
+          joints: runtimeJoints,
+          colliders: runtimeColliders,
+        },
+      ]
+    })
+  }, [nameComponentManager, springBoneBindings, targetModel])
+
   RenderCallbackContext.useRenderCallback(
-    ({ passedSeconds }) => {
+    ({ passedSeconds, timeSinceLastFrame }) => {
       'worklet'
       if (
         !enabled ||
@@ -202,7 +319,8 @@ export function VRMAnimationRetargeter({
         (retargetBindings.length === 0 &&
           retargetExpressionBindings.length === 0 &&
           retargetLookAtExpressionBindings.length === 0 &&
-          retargetNodeConstraintBindings.length === 0)
+          retargetNodeConstraintBindings.length === 0 &&
+          retargetSpringBoneBindings.length === 0)
       ) {
         return
       }
@@ -265,6 +383,58 @@ export function VRMAnimationRetargeter({
       }
       transformManager.commitLocalTransformTransaction()
 
+      for (const spring of retargetSpringBoneBindings) {
+        const centerTranslation: Float3 = spring.center == null ? [0, 0, 0] : transformManager.getWorldTransform(spring.center).translation
+
+        for (const joint of spring.joints) {
+          const nodeWorldTransform = transformManager.getWorldTransform(joint.node)
+          const childWorldTransform = transformManager.getWorldTransform(joint.child)
+          const nodeLocalTransform = transformManager.getTransform(joint.node)
+          const parentWorldRotation: Float4 = joint.parent == null ? [0, 0, 0, 1] : transformManager.getWorldTransform(joint.parent).rotationQuaternion
+          const head = subVec3(nodeWorldTransform.translation, centerTranslation)
+          const animatedTail = subVec3(childWorldTransform.translation, centerTranslation)
+          const boneVector = subVec3(animatedTail, head)
+          const boneLength = lengthVec3(boneVector)
+          if (boneLength <= 0.000001) continue
+
+          const animatedDirection = normalizeVec3(boneVector)
+          const stateKey = `${spring.name}/${joint.nodeName}/${joint.childName}`
+          let state = springBoneState.value[stateKey]
+          if (state == null) {
+            state = { previousTail: animatedTail, tail: animatedTail }
+          }
+
+          const deltaTime = Math.max(1 / 120, Math.min(1 / 30, timeSinceLastFrame || 1 / 60))
+          const inertia = scaleVec3(subVec3(state.tail, state.previousTail), 1 - Math.max(0, Math.min(1, joint.dragForce)))
+          const stiffness = scaleVec3(animatedDirection, joint.stiffness * deltaTime * deltaTime)
+          const gravity = scaleVec3(normalizeVec3(joint.gravityDir, [0, -1, 0]), joint.gravityPower * deltaTime * deltaTime)
+          let nextTail = addVec3(addVec3(addVec3(state.tail, inertia), stiffness), gravity)
+          nextTail = addVec3(head, scaleVec3(normalizeVec3(subVec3(nextTail, head), animatedDirection), boneLength))
+
+          for (const collider of spring.colliders) {
+            const colliderTransform = transformManager.getWorldTransform(collider.node)
+            const colliderTranslation = subVec3(colliderTransform.translation, centerTranslation)
+            const colliderOffset = transformPoint(colliderTranslation, colliderTransform.rotationQuaternion, colliderTransform.scale, collider.offset)
+            const radius = collider.radius + joint.hitRadius
+            if (collider.type === 'sphere') {
+              nextTail = pushOutFromSphere(nextTail, colliderOffset, radius)
+            } else {
+              const colliderTail = transformPoint(colliderTranslation, colliderTransform.rotationQuaternion, colliderTransform.scale, collider.tail)
+              nextTail = pushOutFromSphere(nextTail, closestPointOnSegment(nextTail, colliderOffset, colliderTail), radius)
+            }
+          }
+
+          nextTail = addVec3(head, scaleVec3(normalizeVec3(subVec3(nextTail, head), animatedDirection), boneLength))
+          const nextDirection = normalizeVec3(subVec3(nextTail, head), animatedDirection)
+          const deltaRotation = quatFromUnitVectors(animatedDirection, nextDirection)
+          const nextWorldRotation = multiplyQuat(deltaRotation, nodeWorldTransform.rotationQuaternion)
+          const nextLocalRotation = multiplyQuat(invertQuat(parentWorldRotation), nextWorldRotation)
+
+          transformManager.setTransformFromTRS(joint.node, nodeLocalTransform.translation, nextLocalRotation, nodeLocalTransform.scale)
+          springBoneState.value[stateKey] = { previousTail: state.tail, tail: nextTail }
+        }
+      }
+
       for (const binding of retargetExpressionBindings) {
         const sourceTransform = transformManager.getTransform(binding.source)
         const weight = Math.max(0, Math.min(1, sourceTransform.translation[0])) * binding.weight
@@ -292,6 +462,8 @@ export function VRMAnimationRetargeter({
       retargetExpressionBindings,
       retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,
+      retargetSpringBoneBindings,
+      springBoneState,
       targetVersion,
     ]
   )

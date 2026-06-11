@@ -1,8 +1,8 @@
 import type { VRMCompatibilityReport, VRMGltfJson, VRMVersion } from './types'
 
-const SUPPORTED_EXTENSIONS = new Set(['VRM', 'VRMC_vrm', 'VRMC_vrm_animation', 'VRMC_node_constraint', 'KHR_materials_unlit'])
+const SUPPORTED_EXTENSIONS = new Set(['VRM', 'VRMC_vrm', 'VRMC_vrm_animation', 'VRMC_node_constraint', 'VRMC_springBone', 'KHR_materials_unlit'])
 const FALLBACK_EXTENSIONS = new Set(['KHR_texture_transform', 'KHR_materials_emissive_strength'])
-const UNSUPPORTED_VRM_EXTENSIONS = new Set(['VRMC_materials_mtoon', 'VRMC_springBone'])
+const UNSUPPORTED_VRM_EXTENSIONS = new Set(['VRMC_materials_mtoon'])
 
 function unique(values: Array<string | undefined>): string[] {
   return Array.from(new Set(values.filter((value): value is string => value != null))).sort()
@@ -63,10 +63,6 @@ export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityRe
   if (gltf.extensions?.VRMC_vrm?.lookAt?.type === 'bone' || gltf.extensions?.VRM?.firstPerson?.lookAtTypeName === 'Bone') {
     warnings.push('VRM bone-based LookAt is not applied yet; expression-based LookAt is supported.')
   }
-  if (extensionsUsed.includes('VRMC_springBone')) {
-    warnings.push('VRMC_springBone is not simulated yet; hair, cloth, and accessory secondary motion will be static.')
-  }
-
   return {
     version,
     humanoidBoneCount: getHumanoidBoneCount(gltf),

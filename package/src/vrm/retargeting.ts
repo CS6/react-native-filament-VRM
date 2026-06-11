@@ -22,6 +22,38 @@ export function multiplyQuat(a: Float4, b: Float4): Float4 {
   ])
 }
 
+export function rotateVectorByQuat(vector: Float3, quat: Float4): Float3 {
+  'worklet'
+  const [x, y, z] = vector
+  const [qx, qy, qz, qw] = quat
+  const tx = 2 * (qy * z - qz * y)
+  const ty = 2 * (qz * x - qx * z)
+  const tz = 2 * (qx * y - qy * x)
+
+  return [
+    x + qw * tx + qy * tz - qz * ty,
+    y + qw * ty + qz * tx - qx * tz,
+    z + qw * tz + qx * ty - qy * tx,
+  ]
+}
+
+export function quatFromUnitVectors(from: Float3, to: Float3): Float4 {
+  'worklet'
+  const dot = from[0] * to[0] + from[1] * to[1] + from[2] * to[2]
+  if (dot < -0.999999) {
+    const axis: Float3 = Math.abs(from[0]) > Math.abs(from[2]) ? [-from[1], from[0], 0] : [0, -from[2], from[1]]
+    const length = Math.hypot(axis[0], axis[1], axis[2]) || 1
+    return [axis[0] / length, axis[1] / length, axis[2] / length, 0]
+  }
+
+  return normalizeQuat([
+    from[1] * to[2] - from[2] * to[1],
+    from[2] * to[0] - from[0] * to[2],
+    from[0] * to[1] - from[1] * to[0],
+    1 + dot,
+  ])
+}
+
 export function slerpQuat(a: Float4, b: Float4, t: number): Float4 {
   'worklet'
   let bx = b[0]

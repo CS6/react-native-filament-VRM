@@ -145,6 +145,7 @@ export interface VRMGltfJson {
         humanBones?: Partial<Record<VRMHumanoidBoneName, { node?: number }>>
       }
     }
+    VRMC_springBone?: VRMSpringBoneExtension
   }
   extensionsRequired?: string[]
   extensionsUsed?: string[]
@@ -180,6 +181,8 @@ export interface VRMGltfJson {
     mesh?: number
     name?: string
     rotation?: Float4
+    scale?: Float3
+    translation?: Float3
   }>
   scene?: number
   scenes?: Array<{
@@ -236,6 +239,79 @@ export interface VRMNodeConstraintBinding {
   sourceRestLocalRotation: Float4
   targetRestLocalRotation: Float4
 }
+
+export interface VRMSpringBoneExtension {
+  colliderGroups?: Array<{
+    colliders?: number[]
+    name?: string
+  }>
+  colliders?: VRMSpringBoneCollider[]
+  springs?: VRMSpringBoneSpring[]
+}
+
+export interface VRMSpringBoneCollider {
+  node?: number
+  shape?: {
+    capsule?: {
+      offset?: Float3
+      radius?: number
+      tail?: Float3
+    }
+    sphere?: {
+      offset?: Float3
+      radius?: number
+    }
+  }
+}
+
+export interface VRMSpringBoneSpring {
+  center?: number
+  colliderGroups?: number[]
+  joints?: VRMSpringBoneJoint[]
+  name?: string
+}
+
+export interface VRMSpringBoneJoint {
+  dragForce?: number
+  gravityDir?: Float3
+  gravityPower?: number
+  hitRadius?: number
+  node?: number
+  stiffness?: number
+}
+
+export interface VRMSpringBoneBinding {
+  name: string
+  centerName?: string
+  joints: VRMSpringBoneJointBinding[]
+  colliders: VRMSpringBoneColliderBinding[]
+}
+
+export interface VRMSpringBoneJointBinding {
+  nodeName: string
+  childName: string
+  parentName?: string
+  dragForce: number
+  gravityDir: Float3
+  gravityPower: number
+  hitRadius: number
+  stiffness: number
+}
+
+export type VRMSpringBoneColliderBinding =
+  | {
+      nodeName: string
+      offset: Float3
+      radius: number
+      type: 'sphere'
+    }
+  | {
+      nodeName: string
+      offset: Float3
+      radius: number
+      tail: Float3
+      type: 'capsule'
+    }
 
 export interface VRMGltfDocument {
   json: VRMGltfJson
@@ -358,6 +434,41 @@ export interface VRMNodeConstraintRetargetBinding {
   targetRestScale: Float3
 }
 
+export interface VRMSpringBoneRetargetBinding {
+  name: string
+  center?: Entity
+  joints: VRMSpringBoneJointRetargetBinding[]
+  colliders: VRMSpringBoneColliderRetargetBinding[]
+}
+
+export interface VRMSpringBoneJointRetargetBinding {
+  node: Entity
+  child: Entity
+  parent?: Entity
+  nodeName: string
+  childName: string
+  dragForce: number
+  gravityDir: Float3
+  gravityPower: number
+  hitRadius: number
+  stiffness: number
+}
+
+export type VRMSpringBoneColliderRetargetBinding =
+  | {
+      node: Entity
+      offset: Float3
+      radius: number
+      type: 'sphere'
+    }
+  | {
+      node: Entity
+      offset: Float3
+      radius: number
+      tail: Float3
+      type: 'capsule'
+    }
+
 export interface VRMAnimationRetargeterProps {
   sourceAsset: FilamentAsset
   targetModel: LoadedFilamentModel
@@ -365,6 +476,7 @@ export interface VRMAnimationRetargeterProps {
   expressionBindings?: VRMExpressionBinding[]
   lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
+  springBoneBindings?: VRMSpringBoneBinding[]
   animationIndex?: number
   enabled?: boolean
   targetVersion?: VRMVersion
@@ -375,6 +487,7 @@ export interface VRMAnimationRetargeting {
   expressionBindings: VRMExpressionBinding[]
   lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]
+  springBoneBindings: VRMSpringBoneBinding[]
   clips: VRMGltfAnimationClip[]
   compatibility: VRMCompatibilityReport
   targetVersion: VRMVersion
