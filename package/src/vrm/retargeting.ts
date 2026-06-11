@@ -1,4 +1,5 @@
 import type { Float3, Float4 } from '../types'
+import type { VRMNodeConstraintAimAxis, VRMNodeConstraintRollAxis } from './types'
 
 export function normalizeQuat(quat: Float4): Float4 {
   'worklet'
@@ -52,6 +53,23 @@ export function quatFromUnitVectors(from: Float3, to: Float3): Float4 {
     from[0] * to[1] - from[1] * to[0],
     1 + dot,
   ])
+}
+
+function getAimAxisVector(axis: VRMNodeConstraintAimAxis): Float3 {
+  'worklet'
+  if (axis === 'NegativeX') return [-1, 0, 0]
+  if (axis === 'PositiveY') return [0, 1, 0]
+  if (axis === 'NegativeY') return [0, -1, 0]
+  if (axis === 'PositiveZ') return [0, 0, 1]
+  if (axis === 'NegativeZ') return [0, 0, -1]
+  return [1, 0, 0]
+}
+
+function getRollAxisVector(axis: VRMNodeConstraintRollAxis): Float3 {
+  'worklet'
+  if (axis === 'Y') return [0, 1, 0]
+  if (axis === 'Z') return [0, 0, 1]
+  return [1, 0, 0]
 }
 
 export function slerpQuat(a: Float4, b: Float4, t: number): Float4 {
@@ -117,6 +135,55 @@ export function retargetRotationConstraint(
   const delta = multiplyQuat(invertQuat(sourceRestLocalRotation), sourceAnimatedLocalRotation)
   const weightedDelta = weight >= 1 ? delta : slerpQuat([0, 0, 0, 1], delta, Math.max(0, Math.min(1, weight)))
   return multiplyQuat(targetRestLocalRotation, weightedDelta)
+}
+
+export function retargetRollConstraint(
+  sourceAnimatedLocalRotation: Float4,
+  sourceRestLocalRotation: Float4,
+  targetRestLocalRotation: Float4,
+  rollAxis: VRMNodeConstraintRollAxis,
+  weight: number
+): Float4 {
+  'worklet'
+  const axis = getRollAxisVector(rollAxis)
+  const deltaSource = multiplyQuat(invertQuat(sourceRestLocalRotation), sourceAnimatedLocalRotation)
+  const deltaSourceInParent = multiplyQuat(multiplyQuat(sourceRestLocalRotation, deltaSource), invertQuat(sourceRestLocalRotation))
+  const deltaSourceInTarget = multiplyQuat(multiplyQuat(invertQuat(targetRestLocalRotation), deltaSourceInParent), targetRestLocalRotation)
+  const toVector = rotateVectorByQuat(axis, deltaSourceInTarget)
+  const fromTo = quatFromUnitVectors(axis, toVector)
+  const targetRotation = multiplyQuat(targetRestLocalRotation, multiplyQuat(invertQuat(fromTo), deltaSourceInTarget))
+
+  return weight >= 1 ? targetRotation : slerpQuat(targetRestLocalRotation, targetRotation, Math.max(0, Math.min(1, weight)))
+}
+
+export function retargetAimConstraint(
+  sourceWorldTranslation: Float3,
+  targetWorldTranslation: Float3,
+  targetRestLocalRotation: Float4,
+  targetParentWorldRotation: Float4,
+  aimAxis: VRMNodeConstraintAimAxis,
+  weight: number
+): Float4 {
+  'worklet'
+  const axis = getAimAxisVector(aimAxis)
+  const restWorldRotation = multiplyQuat(targetParentWorldRotation, targetRestLocalRotation)
+  const fromVector = rotateVectorByQuat(axis, restWorldRotation)
+  const toVector = normalizeVec3([
+    sourceWorldTranslation[0] - targetWorldTranslation[0],
+    sourceWorldTranslation[1] - targetWorldTranslation[1],
+    sourceWorldTranslation[2] - targetWorldTranslation[2],
+  ])
+  const fromTo = quatFromUnitVectors(fromVector, toVector)
+  const targetRotation = multiplyQuat(multiplyQuat(multiplyQuat(invertQuat(targetParentWorldRotation), fromTo), targetParentWorldRotation), targetRestLocalRotation)
+
+  return weight >= 1 ? targetRotation : slerpQuat(targetRestLocalRotation, targetRotation, Math.max(0, Math.min(1, weight)))
+}
+
+function normalizeVec3(vector: Float3): Float3 {
+  'worklet'
+  const length = Math.hypot(vector[0], vector[1], vector[2])
+  if (length <= 0.000001) return [0, 0, 1]
+  return [vector[0] / length, vector[1] / length, vector[2] / length]
 }
 
 export function retargetLocalRotation(

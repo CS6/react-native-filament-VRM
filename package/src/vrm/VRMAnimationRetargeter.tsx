@@ -20,6 +20,8 @@ import {
   multiplyQuat,
   normalizeLocalRotation,
   quatFromUnitVectors,
+  retargetAimConstraint,
+  retargetRollConstraint,
   retargetRotationConstraint,
   rotateVectorByQuat,
   scaleTranslationDelta,
@@ -105,6 +107,17 @@ function getLookAtWeight(direction: VRMLookAtExpressionRetargetBinding['directio
   if (direction === 'right') return Math.max(0, -yawDegrees)
   if (direction === 'up') return Math.max(0, pitchDegrees)
   return Math.max(0, -pitchDegrees)
+}
+
+function isAimAxis(axis: string | undefined): axis is 'PositiveX' | 'NegativeX' | 'PositiveY' | 'NegativeY' | 'PositiveZ' | 'NegativeZ' {
+  return (
+    axis === 'PositiveX' ||
+    axis === 'NegativeX' ||
+    axis === 'PositiveY' ||
+    axis === 'NegativeY' ||
+    axis === 'PositiveZ' ||
+    axis === 'NegativeZ'
+  )
 }
 
 export function VRMAnimationRetargeter({
@@ -237,7 +250,7 @@ export function VRMAnimationRetargeter({
   const retargetNodeConstraintBindings = React.useMemo<VRMNodeConstraintRetargetBinding[]>(() => {
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
-    return nodeConstraintBindings.flatMap(({ sourceName, targetName, sourceRestLocalRotation, targetRestLocalRotation, weight }) => {
+    return nodeConstraintBindings.flatMap(({ axis, sourceName, targetName, targetParentName, type, sourceRestLocalRotation, targetRestLocalRotation, weight }) => {
       const source = targetEntities.get(sourceName)
       const target = targetEntities.get(targetName)
       if (source == null || target == null) return []
@@ -245,8 +258,11 @@ export function VRMAnimationRetargeter({
       const targetRestTransform = transformManager.getTransform(target)
       return [
         {
+          axis,
           source,
           target,
+          parent: targetParentName == null ? undefined : targetEntities.get(targetParentName),
+          type,
           weight,
           sourceRestLocalRotation,
           targetRestTranslation: targetRestTransform.translation,
@@ -370,18 +386,39 @@ export function VRMAnimationRetargeter({
       }
       transformManager.commitLocalTransformTransaction()
 
-      transformManager.openLocalTransformTransaction()
       for (const binding of retargetNodeConstraintBindings) {
         const sourceTransform = transformManager.getTransform(binding.source)
-        const targetRotation = retargetRotationConstraint(
-          sourceTransform.rotationQuaternion,
-          binding.sourceRestLocalRotation,
-          binding.targetRestLocalRotation,
-          binding.weight
-        )
+        const targetWorldTransform = transformManager.getWorldTransform(binding.target)
+        const parentWorldRotation: Float4 = binding.parent == null ? [0, 0, 0, 1] : transformManager.getWorldTransform(binding.parent).rotationQuaternion
+        let targetRotation = binding.targetRestLocalRotation
+        if (binding.type === 'rotation') {
+          targetRotation = retargetRotationConstraint(
+            sourceTransform.rotationQuaternion,
+            binding.sourceRestLocalRotation,
+            binding.targetRestLocalRotation,
+            binding.weight
+          )
+        } else if (binding.type === 'roll' && (binding.axis === 'X' || binding.axis === 'Y' || binding.axis === 'Z')) {
+          targetRotation = retargetRollConstraint(
+            sourceTransform.rotationQuaternion,
+            binding.sourceRestLocalRotation,
+            binding.targetRestLocalRotation,
+            binding.axis,
+            binding.weight
+          )
+        } else if (binding.type === 'aim' && isAimAxis(binding.axis)) {
+          const sourceWorldTransform = transformManager.getWorldTransform(binding.source)
+          targetRotation = retargetAimConstraint(
+            sourceWorldTransform.translation,
+            targetWorldTransform.translation,
+            binding.targetRestLocalRotation,
+            parentWorldRotation,
+            binding.axis,
+            binding.weight
+          )
+        }
         transformManager.setTransformFromTRS(binding.target, binding.targetRestTranslation, targetRotation, binding.targetRestScale)
       }
-      transformManager.commitLocalTransformTransaction()
 
       for (const spring of retargetSpringBoneBindings) {
         const centerTranslation: Float3 = spring.center == null ? [0, 0, 0] : transformManager.getWorldTransform(spring.center).translation

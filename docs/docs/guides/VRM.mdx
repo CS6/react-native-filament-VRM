@@ -176,11 +176,8 @@ VRM 1.0 models can use `VRMC_node_constraint` to make secondary nodes follow ano
 Currently supported:
 
 - `rotation`: applies the source node's local rotation delta to the constrained target node, respecting the constraint weight.
-
-Not supported yet:
-
-- `roll`
-- `aim`
+- `aim`: rotates the target from its rest rotation so its configured aim axis points at the source in world coordinates.
+- `roll`: transfers source roll around the configured destination roll axis, respecting the constraint weight.
 
 ## Spring Bones
 
@@ -196,4 +193,4 @@ Seed-san uses this for hair springs and the `RoboWire` chain behind the mechanic
 
 ## Known gaps
 
-The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression-based LookAt, `VRMC_node_constraint` rotation constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for bone-based LookAt, node constraint roll/aim, expression texture transform binds, and expression material color binds.
+The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for bone-based LookAt, expression texture transform binds, and expression material color binds.

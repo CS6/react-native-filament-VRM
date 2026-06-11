@@ -169,8 +169,16 @@ export interface VRMGltfJson {
     extensions?: {
       VRMC_node_constraint?: {
         constraint?: {
-          aim?: unknown
-          roll?: unknown
+          aim?: {
+            aimAxis?: VRMNodeConstraintAimAxis
+            source?: number
+            weight?: number
+          }
+          roll?: {
+            rollAxis?: VRMNodeConstraintRollAxis
+            source?: number
+            weight?: number
+          }
           rotation?: {
             source?: number
             weight?: number
@@ -233,12 +241,21 @@ export interface VRMLookAtExpressionBinding {
 }
 
 export interface VRMNodeConstraintBinding {
+  axis?: VRMNodeConstraintAimAxis | VRMNodeConstraintRollAxis
   sourceName: string
+  targetParentName?: string
   targetName: string
+  type: VRMNodeConstraintType
   weight: number
   sourceRestLocalRotation: Float4
   targetRestLocalRotation: Float4
 }
+
+export type VRMNodeConstraintAimAxis = 'PositiveX' | 'NegativeX' | 'PositiveY' | 'NegativeY' | 'PositiveZ' | 'NegativeZ'
+
+export type VRMNodeConstraintRollAxis = 'X' | 'Y' | 'Z'
+
+export type VRMNodeConstraintType = 'aim' | 'roll' | 'rotation'
 
 export interface VRMSpringBoneExtension {
   colliderGroups?: Array<{
@@ -425,8 +442,11 @@ export interface VRMLookAtExpressionRetargetBinding {
 }
 
 export interface VRMNodeConstraintRetargetBinding {
+  axis?: VRMNodeConstraintAimAxis | VRMNodeConstraintRollAxis
   source: Entity
   target: Entity
+  parent?: Entity
+  type: VRMNodeConstraintType
   weight: number
   sourceRestLocalRotation: Float4
   targetRestTranslation: Float3

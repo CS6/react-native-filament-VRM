@@ -26,20 +26,6 @@ function getHumanoidBoneCount(gltf: VRMGltfJson): number {
   return 0
 }
 
-function getUnsupportedNodeConstraintTypes(gltf: VRMGltfJson): string[] {
-  const unsupportedTypes: string[] = []
-
-  for (const node of gltf.nodes ?? []) {
-    const constraint = node.extensions?.VRMC_node_constraint?.constraint
-    if (constraint == null) continue
-
-    if ('roll' in constraint) unsupportedTypes.push('roll')
-    if ('aim' in constraint) unsupportedTypes.push('aim')
-  }
-
-  return unique(unsupportedTypes)
-}
-
 export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityReport {
   const extensionsUsed = unique(gltf.extensionsUsed ?? [])
   const materialExtensions = unique((gltf.materials ?? []).flatMap((material) => Object.keys(material.extensions ?? {})))
@@ -55,10 +41,6 @@ export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityRe
 
   if (version === '1.0' && materialExtensions.includes('VRMC_materials_mtoon')) {
     warnings.push('VRM 1.0 MToon materials need an explicit fallback or custom material path.')
-  }
-  const unsupportedNodeConstraintTypes = getUnsupportedNodeConstraintTypes(gltf)
-  if (unsupportedNodeConstraintTypes.length > 0) {
-    warnings.push(`VRMC_node_constraint ${unsupportedNodeConstraintTypes.join('/')} constraints are not applied yet.`)
   }
   if (gltf.extensions?.VRMC_vrm?.lookAt?.type === 'bone' || gltf.extensions?.VRM?.firstPerson?.lookAtTypeName === 'Bone') {
     warnings.push('VRM bone-based LookAt is not applied yet; expression-based LookAt is supported.')
