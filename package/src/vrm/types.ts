@@ -160,6 +160,7 @@ export interface VRMGltfJson {
   materials?: Array<{
     alphaMode?: string
     doubleSided?: boolean
+    emissiveFactor?: Float3
     extensions?: Record<string, unknown>
     name?: string
     pbrMetallicRoughness?: {
@@ -171,6 +172,9 @@ export interface VRMGltfJson {
   }>
   meshes?: Array<{
     name?: string
+    primitives?: Array<{
+      material?: number
+    }>
   }>
   nodes?: Array<{
     children?: number[]
@@ -207,7 +211,10 @@ export interface VRMGltfJson {
 }
 
 export interface VRMExpressionDefinition {
+  isBinary?: boolean
+  materialColorBinds?: VRMExpressionMaterialColorBind[]
   morphTargetBinds?: VRMExpressionMorphTargetBind[]
+  textureTransformBinds?: VRMExpressionTextureTransformBind[]
 }
 
 export interface VRMExpressionMorphTargetBind {
@@ -217,12 +224,36 @@ export interface VRMExpressionMorphTargetBind {
   weight?: number
 }
 
+export type VRMExpressionMaterialColorBindType = 'color' | 'emissionColor' | 'shadeColor' | 'matcapColor' | 'rimColor' | 'outlineColor' | string
+
+export interface VRMExpressionMaterialColorBind {
+  material?: number
+  targetValue?: Float4
+  type?: VRMExpressionMaterialColorBindType
+}
+
+export interface VRMExpressionTextureTransformBind {
+  material?: number
+  offset?: [number, number]
+  scale?: [number, number]
+}
+
 export interface VRMExpressionBinding {
   expressionName: string
   sourceName: string
   targetName: string
   morphTargetIndex: number
   weight: number
+}
+
+export interface VRMExpressionMaterialColorBinding {
+  baseValue: Float4
+  expressionName: string
+  parameterName: string
+  primitiveIndex: number
+  sourceName: string
+  targetName: string
+  targetValue: Float4
 }
 
 export interface VRMLookAtDefinition {
@@ -456,6 +487,15 @@ export interface VRMExpressionRetargetBinding {
   weight: number
 }
 
+export interface VRMExpressionMaterialColorRetargetBinding {
+  baseValue: Float4
+  parameterName: string
+  primitiveIndex: number
+  source: Entity
+  target: Entity
+  targetValue: Float4
+}
+
 export interface VRMLookAtExpressionRetargetBinding {
   source: Entity
   direction: 'left' | 'right' | 'up' | 'down'
@@ -532,6 +572,7 @@ export interface VRMAnimationRetargeterProps {
   targetModel: LoadedFilamentModel
   bindings: VRMHumanoidBinding[]
   expressionBindings?: VRMExpressionBinding[]
+  expressionMaterialColorBindings?: VRMExpressionMaterialColorBinding[]
   lookAtBoneBindings?: VRMLookAtBoneBinding[]
   lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
@@ -544,6 +585,7 @@ export interface VRMAnimationRetargeterProps {
 export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
   expressionBindings: VRMExpressionBinding[]
+  expressionMaterialColorBindings: VRMExpressionMaterialColorBinding[]
   lookAtBoneBindings: VRMLookAtBoneBinding[]
   lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]

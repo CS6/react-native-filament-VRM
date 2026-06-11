@@ -26,6 +26,14 @@ function getHumanoidBoneCount(gltf: VRMGltfJson): number {
   return 0
 }
 
+function hasTextureTransformExpressionBinds(gltf: VRMGltfJson): boolean {
+  const expressions = gltf.extensions?.VRMC_vrm?.expressions
+  return Object.values({
+    ...(expressions?.preset ?? {}),
+    ...(expressions?.custom ?? {}),
+  }).some((expression) => (expression?.textureTransformBinds?.length ?? 0) > 0)
+}
+
 export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityReport {
   const extensionsUsed = unique(gltf.extensionsUsed ?? [])
   const materialExtensions = unique((gltf.materials ?? []).flatMap((material) => Object.keys(material.extensions ?? {})))
@@ -41,6 +49,9 @@ export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityRe
 
   if (version === '1.0' && materialExtensions.includes('VRMC_materials_mtoon')) {
     warnings.push('VRM 1.0 MToon materials need an explicit fallback or custom material path.')
+  }
+  if (hasTextureTransformExpressionBinds(gltf)) {
+    warnings.push('VRM expression textureTransformBinds require native sampler transform parameter support and are not applied yet.')
   }
   return {
     version,

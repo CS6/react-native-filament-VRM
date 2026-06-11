@@ -7,6 +7,7 @@ import type { Entity, Float3, Float4 } from '../types'
 import type {
   VRMAnimationRetargeterProps,
   VRMExpressionRetargetBinding,
+  VRMExpressionMaterialColorRetargetBinding,
   VRMLookAtBoneRetargetBinding,
   VRMLookAtExpressionRetargetBinding,
   VRMNodeConstraintRetargetBinding,
@@ -89,6 +90,21 @@ function pushOutFromSphere(point: Float3, center: Float3, radius: number): Float
   return addVec3(center, scaleVec3(direction, radius))
 }
 
+function addFloat4(a: Float4, b: Float4): Float4 {
+  'worklet'
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]
+}
+
+function subFloat4(a: Float4, b: Float4): Float4 {
+  'worklet'
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]
+}
+
+function scaleFloat4(vector: Float4, scale: number): Float4 {
+  'worklet'
+  return [vector[0] * scale, vector[1] * scale, vector[2] * scale, vector[3] * scale]
+}
+
 function getLookAtAngles(rotation: [number, number, number, number]): { pitchDegrees: number; yawDegrees: number } {
   'worklet'
   const [x, y, z, w] = rotation
@@ -162,6 +178,7 @@ export function VRMAnimationRetargeter({
   targetModel,
   bindings,
   expressionBindings = [],
+  expressionMaterialColorBindings = [],
   lookAtBoneBindings = [],
   lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
@@ -259,6 +276,28 @@ export function VRMAnimationRetargeter({
       ]
     })
   }, [expressionBindings, nameComponentManager, sourceAsset, targetModel])
+
+  const retargetExpressionMaterialColorBindings = React.useMemo<VRMExpressionMaterialColorRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return expressionMaterialColorBindings.flatMap(({ baseValue, parameterName, primitiveIndex, sourceName, targetName, targetValue }) => {
+      const source = sourceEntities.get(sourceName)
+      const target = targetEntities.get(targetName)
+      if (source == null || target == null) return []
+
+      return [
+        {
+          baseValue,
+          parameterName,
+          primitiveIndex,
+          source,
+          target,
+          targetValue,
+        },
+      ]
+    })
+  }, [expressionMaterialColorBindings, nameComponentManager, sourceAsset, targetModel])
 
   const retargetLookAtBoneBindings = React.useMemo<VRMLookAtBoneRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -394,6 +433,7 @@ export function VRMAnimationRetargeter({
         targetAnimator == null ||
         (retargetBindings.length === 0 &&
           retargetExpressionBindings.length === 0 &&
+          retargetExpressionMaterialColorBindings.length === 0 &&
           retargetLookAtBoneBindings.length === 0 &&
           retargetLookAtExpressionBindings.length === 0 &&
           retargetNodeConstraintBindings.length === 0 &&
@@ -539,6 +579,43 @@ export function VRMAnimationRetargeter({
         renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
       }
 
+      for (let index = 0; index < retargetExpressionMaterialColorBindings.length; index++) {
+        const binding = retargetExpressionMaterialColorBindings[index]
+        if (binding == null) continue
+
+        let value = binding.baseValue
+        let alreadyApplied = false
+        for (let previousIndex = 0; previousIndex < index; previousIndex++) {
+          const previous = retargetExpressionMaterialColorBindings[previousIndex]
+          if (
+            previous?.target === binding.target &&
+            previous.primitiveIndex === binding.primitiveIndex &&
+            previous.parameterName === binding.parameterName
+          ) {
+            alreadyApplied = true
+            break
+          }
+        }
+        if (alreadyApplied) continue
+
+        for (const candidate of retargetExpressionMaterialColorBindings) {
+          if (
+            candidate.target !== binding.target ||
+            candidate.primitiveIndex !== binding.primitiveIndex ||
+            candidate.parameterName !== binding.parameterName
+          ) {
+            continue
+          }
+
+          const sourceTransform = transformManager.getTransform(candidate.source)
+          const weight = Math.max(0, Math.min(1, sourceTransform.translation[0]))
+          value = addFloat4(value, scaleFloat4(subFloat4(candidate.targetValue, candidate.baseValue), weight))
+        }
+
+        const materialInstance = renderableManager.getMaterialInstanceAt(binding.target, binding.primitiveIndex)
+        materialInstance.setFloat4Parameter(binding.parameterName, value)
+      }
+
       for (const binding of retargetLookAtExpressionBindings) {
         const sourceTransform = transformManager.getTransform(binding.source)
         const { pitchDegrees, yawDegrees } = getLookAtAngles(sourceTransform.rotationQuaternion)
@@ -565,6 +642,7 @@ export function VRMAnimationRetargeter({
       renderableManager,
       retargetBindings,
       retargetExpressionBindings,
+      retargetExpressionMaterialColorBindings,
       retargetLookAtBoneBindings,
       retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,
