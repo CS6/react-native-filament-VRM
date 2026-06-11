@@ -1920,7 +1920,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament (1.9.0):
+  - react-native-filament (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -1938,16 +1938,16 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-filament/camutils (= 1.9.0)
-    - react-native-filament/filamat (= 1.9.0)
-    - react-native-filament/filament (= 1.9.0)
-    - react-native-filament/gltfio_core (= 1.9.0)
-    - react-native-filament/image (= 1.9.0)
-    - react-native-filament/ktxreader (= 1.9.0)
-    - react-native-filament/math (= 1.9.0)
-    - react-native-filament/tsl (= 1.9.0)
-    - react-native-filament/uberz (= 1.9.0)
-    - react-native-filament/utils (= 1.9.0)
+    - react-native-filament/camutils (= 1.11.0)
+    - react-native-filament/filamat (= 1.11.0)
+    - react-native-filament/filament (= 1.11.0)
+    - react-native-filament/gltfio_core (= 1.11.0)
+    - react-native-filament/image (= 1.11.0)
+    - react-native-filament/ktxreader (= 1.11.0)
+    - react-native-filament/math (= 1.11.0)
+    - react-native-filament/tsl (= 1.11.0)
+    - react-native-filament/uberz (= 1.11.0)
+    - react-native-filament/utils (= 1.11.0)
     - react-native-worklets-core
     - React-NativeModulesApple
     - React-RCTFabric
@@ -1959,37 +1959,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/camutils (1.9.0):
-    - boost
-    - DoubleConversion
-    - fast_float
-    - fmt
-    - glog
-    - hermes-engine
-    - RCT-Folly
-    - RCT-Folly/Fabric
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - react-native-filament/math
-    - react-native-worklets-core
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - SocketRocket
-    - Yoga
-  - react-native-filament/filamat (1.9.0):
+  - react-native-filament/camutils (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2008,7 +1978,6 @@ PODS:
     - React-ImageManager
     - React-jsi
     - react-native-filament/math
-    - react-native-filament/utils
     - react-native-worklets-core
     - React-NativeModulesApple
     - React-RCTFabric
@@ -2020,7 +1989,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/filament (1.9.0):
+  - react-native-filament/filamat (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2051,7 +2020,38 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/gltfio_core (1.9.0):
+  - react-native-filament/filament (1.11.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-filament/math
+    - react-native-filament/utils
+    - react-native-worklets-core
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - react-native-filament/gltfio_core (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2083,7 +2083,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/image (1.9.0):
+  - react-native-filament/image (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2113,7 +2113,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/ktxreader (1.9.0):
+  - react-native-filament/ktxreader (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2144,7 +2144,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/math (1.9.0):
+  - react-native-filament/math (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2173,7 +2173,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/tsl (1.9.0):
+  - react-native-filament/tsl (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2202,7 +2202,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/uberz (1.9.0):
+  - react-native-filament/uberz (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2234,7 +2234,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-filament/utils (1.9.0):
+  - react-native-filament/utils (1.11.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3569,7 +3569,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 309703e71d3f2f1ed7dc7889d58309c9d77a95a4
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
-  hermes-engine: 4c31ac24845fb37bb44a8172d56ea5a26438eafd
+  hermes-engine: 6f6cd9622e97b2e369fd296919c8dbea8952e3d5
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: a41bbdd9af30bf2e5715796b313e44ec43eefff1
   RCTRequired: 7be34aabb0b77c3cefe644528df0fa0afad4e4d0
@@ -3607,7 +3607,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 7b72a669e94662359dad4f42b5af005eb24b4e83
   React-microtasksnativemodule: cdc02da075f2857803ed63f24f5f72fc40e094c0
   react-native-blob-util: 04189c38b188b2b76ee453be34765241c552547f
-  react-native-filament: 8015e685f5c12f62e4d86fb587087c9604dce94f
+  react-native-filament: 4b3adb745a7e4eb33debcf9abdc6cb6677ae8d2d
   react-native-safe-area-context: c00143b4823773bba23f2f19f85663ae89ceb460
   react-native-video: 7b821291837d8ba7b9d7574bfeb0cd651e910141
   react-native-worklets-core: 28a6e2121dcf62543b703e81bc4860e9a0150cee
@@ -3651,6 +3651,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: 5456bb010373068fc92221140921b09d126b116e
 
-PODFILE CHECKSUM: 22ec743cdc4538c0dac9fa5d6d809099259c1da0
+PODFILE CHECKSUM: 2b87fb90d391f29357e8802cc39cde031b613055
 
 COCOAPODS: 1.15.2
