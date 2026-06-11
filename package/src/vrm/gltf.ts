@@ -6,7 +6,7 @@ const GLB_MAGIC = 0x46546c67
 const GLB_JSON_CHUNK_TYPE = 0x4e4f534a
 const GLB_BIN_CHUNK_TYPE = 0x004e4942
 
-function resolveSourceUri(source: BufferSource): string {
+export function resolveBufferSourceUri(source: BufferSource): string {
   if (typeof source === 'object') return source.uri
 
   const asset = Image.resolveAssetSource(source)
@@ -82,7 +82,7 @@ export async function loadGltfJson(source: BufferSource): Promise<VRMGltfJson> {
 }
 
 export async function loadGltfDocument(source: BufferSource): Promise<VRMGltfDocument> {
-  const uri = resolveSourceUri(source)
+  const uri = resolveBufferSourceUri(source)
   const response = await fetch(uri)
   if (!response.ok) {
     throw new Error(`Failed to load glTF JSON from ${uri}: ${response.status}`)

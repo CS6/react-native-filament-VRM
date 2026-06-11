@@ -158,6 +158,18 @@ export interface VRMMaterialFallbackOptions {
   removeUnsupportedVRMExtensions?: boolean
 }
 
+export interface VRMMaterialFallbackSourceOptions extends VRMMaterialFallbackOptions {
+  enabled?: boolean
+  fileName?: string
+  writeFallbackGlb: (buffer: ArrayBuffer, fileName: string) => Promise<BufferSource>
+}
+
+export interface VRMMaterialFallbackSourceState {
+  source: BufferSource
+  error?: Error
+  isLoading: boolean
+}
+
 export interface VRMGltfAnimation {
   name?: string
   channels?: Array<{

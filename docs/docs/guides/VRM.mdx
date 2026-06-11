@@ -62,6 +62,40 @@ function Avatar() {
 
 `targetVersion` is part of the retargeting result because VRM 0.x targets need a different axis conversion from VRM 1.0 targets.
 
+If the VRM needs material fallback, render the patched fallback source but keep using the original VRM source for animation metadata:
+
+```tsx
+import { ModelRenderer, VRMAnimationRetargeter, useModel, useVRMAnimation, useVRMMaterialFallbackSource } from 'react-native-filament'
+
+const vrmSource = require('./avatar.vrm')
+const vrmaSource = require('./dance.vrma')
+
+function Avatar() {
+  const fallback = useVRMMaterialFallbackSource(vrmSource, {
+    writeFallbackGlb: async (buffer, fileName) => {
+      const uri = await writeBufferToCacheFile(buffer, fileName)
+      return { uri }
+    },
+  })
+  const model = useModel(fallback.source)
+  const animation = useVRMAnimation(vrmaSource, vrmSource)
+
+  return (
+    <>
+      {model.state === 'loaded' && <ModelRenderer model={model} transformToUnitCube />}
+      {model.state === 'loaded' && animation.sourceAsset != null && animation.retargeting != null && (
+        <VRMAnimationRetargeter
+          sourceAsset={animation.sourceAsset}
+          targetModel={model}
+          bindings={animation.retargeting.bindings}
+          targetVersion={animation.retargeting.targetVersion}
+        />
+      )}
+    </>
+  )
+}
+```
+
 ## VRM 0.x axis compatibility
 
 VRM 0.x and VRM 1.0 do not use the same forward-facing convention. VRM 0.x requires the model to face `-Z`, while VRM 1.0 T-pose defines the visible model as facing `+Z`.

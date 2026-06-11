@@ -1,14 +1,14 @@
 import * as React from 'react'
-import { Button, Image, StyleSheet, Text, View } from 'react-native'
+import { Button, StyleSheet, Text, View } from 'react-native'
 import {
   Camera,
-  createVRMMaterialFallbackGlb,
   DefaultLight,
   FilamentScene,
   FilamentView,
   ModelRenderer,
   useModel,
   useVRMAnimation,
+  useVRMMaterialFallbackSource,
   VRMAnimationRetargeter,
 } from 'react-native-filament'
 import ReactNativeBlobUtil from 'react-native-blob-util'
@@ -36,8 +36,6 @@ const MOTIONS = [
 
 const AUTO_CYCLE_INTERVAL_MS = 5000
 
-type ExampleModelSource = number | { uri: string }
-
 function toBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -58,48 +56,6 @@ function toBase64(buffer: ArrayBuffer): string {
   return output
 }
 
-function resolveAssetUri(source: number): string {
-  const asset = Image.resolveAssetSource(source)
-  if (asset == null) {
-    throw new Error(`Failed to resolve VRM asset: ${source}`)
-  }
-  return asset.uri
-}
-
-function useVRMMaterialFallbackSource(source: number): ExampleModelSource {
-  const [fallbackSource, setFallbackSource] = React.useState<ExampleModelSource>(source)
-
-  React.useEffect(() => {
-    let isMounted = true
-    setFallbackSource(source)
-
-    const writeFallback = async () => {
-      const response = await fetch(resolveAssetUri(source))
-      if (!response.ok) {
-        throw new Error(`Failed to load VRM source for fallback: ${response.status}`)
-      }
-
-      const patchedBuffer = createVRMMaterialFallbackGlb(await response.arrayBuffer())
-      const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/rn-filament-vrm-fallback-${source}.vrm`
-      await ReactNativeBlobUtil.fs.writeFile(path, toBase64(patchedBuffer), 'base64')
-
-      if (isMounted) {
-        setFallbackSource({ uri: `file://${path}` })
-      }
-    }
-
-    writeFallback().catch((error) => {
-      console.log('Failed to create VRM material fallback', error)
-    })
-
-    return () => {
-      isMounted = false
-    }
-  }, [source])
-
-  return fallbackSource
-}
-
 function Renderer({
   animationLabel,
   animationSource,
@@ -111,7 +67,7 @@ function Renderer({
   animationSource: number
   modelLabel: string
   modelMetadataSource: number
-  modelSource: ExampleModelSource
+  modelSource: number | { uri: string }
 }) {
   const vrmModel = useModel(modelSource)
   const vrmAnimation = useVRMAnimation(animationSource, modelMetadataSource)
@@ -162,7 +118,12 @@ export function VRMModel() {
   const [isAutoCycleEnabled, setIsAutoCycleEnabled] = React.useState(false)
   const avatar = AVATARS[avatarIndex] ?? AVATARS[0]
   const motion = MOTIONS[motionIndex] ?? MOTIONS[0]
-  const modelSource = useVRMMaterialFallbackSource(avatar.source)
+  const writeFallbackGlb = React.useCallback(async (buffer: ArrayBuffer, fileName: string) => {
+    const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${fileName}`
+    await ReactNativeBlobUtil.fs.writeFile(path, toBase64(buffer), 'base64')
+    return { uri: `file://${path}` }
+  }, [])
+  const modelFallback = useVRMMaterialFallbackSource(avatar.source, { writeFallbackGlb })
 
   React.useEffect(() => {
     if (!isAutoCycleEnabled) return
@@ -184,12 +145,12 @@ export function VRMModel() {
     <SafeAreaView style={styles.container}>
       <FilamentScene key={count}>
         <Renderer
-          key={`${avatar.source}-${motion.source}-${typeof modelSource === 'object' ? modelSource.uri : modelSource}`}
+          key={`${avatar.source}-${motion.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
           animationLabel={motion.label}
           animationSource={motion.source}
           modelLabel={avatar.label}
           modelMetadataSource={avatar.source}
-          modelSource={modelSource}
+          modelSource={modelFallback.source}
         />
       </FilamentScene>
       <View style={styles.selectionBar}>
