@@ -3,7 +3,13 @@ import { RenderCallbackContext } from '../react/RenderCallbackContext'
 import { useAnimator } from '../hooks/useAnimator'
 import { useFilamentContext } from '../hooks/useFilamentContext'
 import type { Entity } from '../types'
-import type { VRMAnimationRetargeterProps, VRMExpressionRetargetBinding, VRMNodeConstraintRetargetBinding, VRMRetargetBinding } from './types'
+import type {
+  VRMAnimationRetargeterProps,
+  VRMExpressionRetargetBinding,
+  VRMLookAtExpressionRetargetBinding,
+  VRMNodeConstraintRetargetBinding,
+  VRMRetargetBinding,
+} from './types'
 import {
   denormalizeLocalRotation,
   flipVRM0NormalizedRotation,
@@ -17,11 +23,33 @@ function getEntityMap(entities: Entity[], getEntityName: (entity: Entity) => str
   return new Map(entities.map((entity) => [getEntityName(entity), entity]))
 }
 
+function getLookAtAngles(rotation: [number, number, number, number]): { pitchDegrees: number; yawDegrees: number } {
+  'worklet'
+  const [x, y, z, w] = rotation
+  const test = 2 * (w * x - y * z)
+  const pitch = Math.asin(Math.max(-1, Math.min(1, test)))
+  const yaw = Math.atan2(2 * (w * y + z * x), 1 - 2 * (x * x + y * y))
+
+  return {
+    pitchDegrees: (pitch * 180) / Math.PI,
+    yawDegrees: (yaw * 180) / Math.PI,
+  }
+}
+
+function getLookAtWeight(direction: VRMLookAtExpressionRetargetBinding['direction'], pitchDegrees: number, yawDegrees: number): number {
+  'worklet'
+  if (direction === 'left') return Math.max(0, yawDegrees)
+  if (direction === 'right') return Math.max(0, -yawDegrees)
+  if (direction === 'up') return Math.max(0, pitchDegrees)
+  return Math.max(0, -pitchDegrees)
+}
+
 export function VRMAnimationRetargeter({
   sourceAsset,
   targetModel,
   bindings,
   expressionBindings = [],
+  lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
   animationIndex = 0,
   enabled = true,
@@ -116,6 +144,31 @@ export function VRMAnimationRetargeter({
     })
   }, [expressionBindings, nameComponentManager, sourceAsset, targetModel])
 
+  const retargetLookAtExpressionBindings = React.useMemo<VRMLookAtExpressionRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return lookAtExpressionBindings.flatMap(
+      ({ sourceName, targetName, direction, morphTargetIndex, weight, inputMaxValue, outputScale }) => {
+        const source = sourceEntities.get(sourceName)
+        const target = targetEntities.get(targetName)
+        if (source == null || target == null) return []
+
+        return [
+          {
+            source,
+            target,
+            direction,
+            morphTargetIndex,
+            weight,
+            inputMaxValue,
+            outputScale,
+          },
+        ]
+      }
+    )
+  }, [lookAtExpressionBindings, nameComponentManager, sourceAsset, targetModel])
+
   const retargetNodeConstraintBindings = React.useMemo<VRMNodeConstraintRetargetBinding[]>(() => {
     const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
 
@@ -146,7 +199,10 @@ export function VRMAnimationRetargeter({
         !enabled ||
         sourceAnimator == null ||
         targetAnimator == null ||
-        (retargetBindings.length === 0 && retargetExpressionBindings.length === 0 && retargetNodeConstraintBindings.length === 0)
+        (retargetBindings.length === 0 &&
+          retargetExpressionBindings.length === 0 &&
+          retargetLookAtExpressionBindings.length === 0 &&
+          retargetNodeConstraintBindings.length === 0)
       ) {
         return
       }
@@ -215,6 +271,14 @@ export function VRMAnimationRetargeter({
         renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
       }
 
+      for (const binding of retargetLookAtExpressionBindings) {
+        const sourceTransform = transformManager.getTransform(binding.source)
+        const { pitchDegrees, yawDegrees } = getLookAtAngles(sourceTransform.rotationQuaternion)
+        const angle = getLookAtWeight(binding.direction, pitchDegrees, yawDegrees)
+        const weight = Math.max(0, Math.min(1, angle / binding.inputMaxValue)) * binding.outputScale * binding.weight
+        renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
+      }
+
       targetAnimator.updateBoneMatrices()
     },
     [
@@ -226,6 +290,7 @@ export function VRMAnimationRetargeter({
       renderableManager,
       retargetBindings,
       retargetExpressionBindings,
+      retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,
       targetVersion,
     ]

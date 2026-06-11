@@ -60,6 +60,9 @@ export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityRe
   if (unsupportedNodeConstraintTypes.length > 0) {
     warnings.push(`VRMC_node_constraint ${unsupportedNodeConstraintTypes.join('/')} constraints are not applied yet.`)
   }
+  if (gltf.extensions?.VRMC_vrm?.lookAt?.type === 'bone' || gltf.extensions?.VRM?.firstPerson?.lookAtTypeName === 'Bone') {
+    warnings.push('VRM bone-based LookAt is not applied yet; expression-based LookAt is supported.')
+  }
   if (extensionsUsed.includes('VRMC_springBone')) {
     warnings.push('VRMC_springBone is not simulated yet; hair, cloth, and accessory secondary motion will be static.')
   }

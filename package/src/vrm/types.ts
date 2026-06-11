@@ -119,12 +119,16 @@ export interface VRMGltfJson {
           node?: number
         }>
       }
+      firstPerson?: {
+        lookAtTypeName?: string
+      }
     }
     VRMC_vrm?: {
       expressions?: {
         preset?: Partial<Record<string, VRMExpressionDefinition>>
         custom?: Record<string, VRMExpressionDefinition>
       }
+      lookAt?: VRMLookAtDefinition
       humanoid?: {
         humanBones?: Partial<Record<VRMHumanoidBoneName, { node?: number }>>
       }
@@ -133,6 +137,9 @@ export interface VRMGltfJson {
       expressions?: {
         preset?: Partial<Record<string, { node?: number }>>
         custom?: Record<string, { node?: number }>
+      }
+      lookAt?: {
+        node?: number
       }
       humanoid?: {
         humanBones?: Partial<Record<VRMHumanoidBoneName, { node?: number }>>
@@ -197,6 +204,29 @@ export interface VRMExpressionBinding {
   targetName: string
   morphTargetIndex: number
   weight: number
+}
+
+export interface VRMLookAtDefinition {
+  rangeMapHorizontalInner?: VRMLookAtRangeMap
+  rangeMapHorizontalOuter?: VRMLookAtRangeMap
+  rangeMapVerticalDown?: VRMLookAtRangeMap
+  rangeMapVerticalUp?: VRMLookAtRangeMap
+  type?: 'bone' | 'expression' | string
+}
+
+export interface VRMLookAtRangeMap {
+  inputMaxValue?: number
+  outputScale?: number
+}
+
+export interface VRMLookAtExpressionBinding {
+  sourceName: string
+  direction: 'left' | 'right' | 'up' | 'down'
+  targetName: string
+  morphTargetIndex: number
+  weight: number
+  inputMaxValue: number
+  outputScale: number
 }
 
 export interface VRMNodeConstraintBinding {
@@ -308,6 +338,16 @@ export interface VRMExpressionRetargetBinding {
   weight: number
 }
 
+export interface VRMLookAtExpressionRetargetBinding {
+  source: Entity
+  direction: 'left' | 'right' | 'up' | 'down'
+  target: Entity
+  morphTargetIndex: number
+  weight: number
+  inputMaxValue: number
+  outputScale: number
+}
+
 export interface VRMNodeConstraintRetargetBinding {
   source: Entity
   target: Entity
@@ -323,6 +363,7 @@ export interface VRMAnimationRetargeterProps {
   targetModel: LoadedFilamentModel
   bindings: VRMHumanoidBinding[]
   expressionBindings?: VRMExpressionBinding[]
+  lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
   animationIndex?: number
   enabled?: boolean
@@ -332,6 +373,7 @@ export interface VRMAnimationRetargeterProps {
 export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
   expressionBindings: VRMExpressionBinding[]
+  lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]
   clips: VRMGltfAnimationClip[]
   compatibility: VRMCompatibilityReport
