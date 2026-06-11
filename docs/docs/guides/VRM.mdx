@@ -32,6 +32,36 @@ The retargeting path uses these inputs:
 - VRM 0.x humanoid rest pose from `extensions.VRM.humanoid.humanBones`.
 - Source and target local/world rest rotations for each bound humanoid bone.
 
+Use `useVRMAnimation` to load the metadata required by `VRMAnimationRetargeter`. The hook also loads the VRMA file as a hidden Filament asset because the native animator samples its glTF animation tracks each frame.
+
+```tsx
+import { ModelRenderer, VRMAnimationRetargeter, useModel, useVRMAnimation } from 'react-native-filament'
+
+const vrmSource = require('./avatar.vrm')
+const vrmaSource = require('./dance.vrma')
+
+function Avatar() {
+  const model = useModel(vrmSource)
+  const animation = useVRMAnimation(vrmaSource, vrmSource)
+
+  return (
+    <>
+      {model.state === 'loaded' && <ModelRenderer model={model} transformToUnitCube />}
+      {model.state === 'loaded' && animation.sourceAsset != null && animation.retargeting != null && (
+        <VRMAnimationRetargeter
+          sourceAsset={animation.sourceAsset}
+          targetModel={model}
+          bindings={animation.retargeting.bindings}
+          targetVersion={animation.retargeting.targetVersion}
+        />
+      )}
+    </>
+  )
+}
+```
+
+`targetVersion` is part of the retargeting result because VRM 0.x targets need a different axis conversion from VRM 1.0 targets.
+
 ## VRM 0.x axis compatibility
 
 VRM 0.x and VRM 1.0 do not use the same forward-facing convention. VRM 0.x requires the model to face `-Z`, while VRM 1.0 T-pose defines the visible model as facing `+Z`.

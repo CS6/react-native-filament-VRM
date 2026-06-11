@@ -3,24 +3,13 @@ import { Button, Image, StyleSheet, Text, View } from 'react-native'
 import {
   Camera,
   createVRMMaterialFallbackGlb,
-  createVRMHumanoidBindings,
   DefaultLight,
   FilamentScene,
   FilamentView,
-  getGltfAnimationClips,
-  getVRMCompatibilityReport,
-  getVRMHumanoidRestPose,
-  getVRMAHumanoidRestPose,
-  loadGltfDocument,
-  loadGltfJson,
   ModelRenderer,
-  useBuffer,
-  useDisposableResource,
-  useFilamentContext,
   useModel,
+  useVRMAnimation,
   VRMAnimationRetargeter,
-  VRMHumanoidBinding,
-  VRMVersion,
 } from 'react-native-filament'
 import ReactNativeBlobUtil from 'react-native-blob-util'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -111,20 +100,6 @@ function useVRMMaterialFallbackSource(source: number): ExampleModelSource {
   return fallbackSource
 }
 
-function useHiddenFilamentAsset(source: number) {
-  const { engine, workletContext } = useFilamentContext()
-  const assetBuffer = useBuffer({ source, releaseOnUnmount: false })
-
-  return useDisposableResource(() => {
-    if (assetBuffer == null) return
-
-    return workletContext.runAsync(() => {
-      'worklet'
-      return engine.loadAsset(assetBuffer)
-    })
-  }, [assetBuffer, workletContext, engine])
-}
-
 function Renderer({
   animationLabel,
   animationSource,
@@ -139,42 +114,27 @@ function Renderer({
   modelSource: ExampleModelSource
 }) {
   const vrmModel = useModel(modelSource)
-  const vrmaAsset = useHiddenFilamentAsset(animationSource)
-  const [bindings, setBindings] = React.useState<VRMHumanoidBinding[]>([])
-  const [targetVersion, setTargetVersion] = React.useState<VRMVersion>('unknown')
+  const vrmAnimation = useVRMAnimation(animationSource, modelMetadataSource)
 
   React.useEffect(() => {
-    let isMounted = true
-
-    Promise.all([loadGltfDocument(animationSource), loadGltfJson(modelMetadataSource)])
-      .then(([vrmaDocument, vrmGltf]) => {
-        if (!isMounted) return
-
-        const vrmaGltf = vrmaDocument.json
-        const nextBindings = createVRMHumanoidBindings(getVRMAHumanoidRestPose(vrmaGltf), getVRMHumanoidRestPose(vrmGltf))
-        const clips = getGltfAnimationClips(vrmaDocument)
-        const compatibility = getVRMCompatibilityReport(vrmGltf)
-        console.log(
-          `VRMA retarget ${modelLabel} / ${animationLabel}: ${nextBindings.length} bindings, ${clips.length} clips, ${clips[0]?.channels.length ?? 0} channels, ${clips[0]?.duration ?? 0}s`
-        )
-        console.log(
-          `VRM compatibility ${modelLabel}: version=${compatibility.version}, bones=${compatibility.humanoidBoneCount}, unsupported=${compatibility.unsupportedExtensions.join(',') || 'none'}, fallback=${compatibility.fallbackExtensions.join(',') || 'none'}`
-        )
-        for (const warning of compatibility.warnings) {
-          console.log(`VRM compatibility warning ${modelLabel}: ${warning}`)
-        }
-        setTargetVersion(compatibility.version)
-        setBindings(nextBindings)
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : String(error)
-        console.log(`Failed to parse VRM/VRMA humanoid metadata for ${modelLabel} / ${animationLabel}: ${message}`)
-      })
-
-    return () => {
-      isMounted = false
+    const retargeting = vrmAnimation.retargeting
+    if (retargeting == null) {
+      if (vrmAnimation.error != null) {
+        console.log(`Failed to parse VRM/VRMA humanoid metadata for ${modelLabel} / ${animationLabel}: ${vrmAnimation.error.message}`)
+      }
+      return
     }
-  }, [animationLabel, animationSource, modelLabel, modelMetadataSource])
+
+    console.log(
+      `VRMA retarget ${modelLabel} / ${animationLabel}: ${retargeting.bindings.length} bindings, ${retargeting.clips.length} clips, ${retargeting.clips[0]?.channels.length ?? 0} channels, ${retargeting.clips[0]?.duration ?? 0}s`
+    )
+    console.log(
+      `VRM compatibility ${modelLabel}: version=${retargeting.compatibility.version}, bones=${retargeting.compatibility.humanoidBoneCount}, unsupported=${retargeting.compatibility.unsupportedExtensions.join(',') || 'none'}, fallback=${retargeting.compatibility.fallbackExtensions.join(',') || 'none'}`
+    )
+    for (const warning of retargeting.compatibility.warnings) {
+      console.log(`VRM compatibility warning ${modelLabel}: ${warning}`)
+    }
+  }, [animationLabel, modelLabel, vrmAnimation.error, vrmAnimation.retargeting])
 
   return (
     <View style={styles.container}>
@@ -182,8 +142,13 @@ function Renderer({
         <Camera cameraPosition={[0, 0.25, -3]} cameraTarget={[0, 0, 0]} />
         <DefaultLight />
         {vrmModel.state === 'loaded' && <ModelRenderer model={vrmModel} transformToUnitCube />}
-        {vrmModel.state === 'loaded' && vrmaAsset != null && bindings.length > 0 && (
-          <VRMAnimationRetargeter sourceAsset={vrmaAsset} targetModel={vrmModel} bindings={bindings} targetVersion={targetVersion} />
+        {vrmModel.state === 'loaded' && vrmAnimation.sourceAsset != null && vrmAnimation.retargeting != null && (
+          <VRMAnimationRetargeter
+            sourceAsset={vrmAnimation.sourceAsset}
+            targetModel={vrmModel}
+            bindings={vrmAnimation.retargeting.bindings}
+            targetVersion={vrmAnimation.retargeting.targetVersion}
+          />
         )}
       </FilamentView>
     </View>

@@ -239,3 +239,17 @@ export interface VRMAnimationRetargeterProps {
   enabled?: boolean
   targetVersion?: VRMVersion
 }
+
+export interface VRMAnimationRetargeting {
+  bindings: VRMHumanoidBinding[]
+  clips: VRMGltfAnimationClip[]
+  compatibility: VRMCompatibilityReport
+  targetVersion: VRMVersion
+}
+
+export interface VRMAnimationState {
+  sourceAsset?: FilamentAsset
+  retargeting?: VRMAnimationRetargeting
+  error?: Error
+  isLoading: boolean
+}
