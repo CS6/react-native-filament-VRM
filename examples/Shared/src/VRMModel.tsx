@@ -82,7 +82,7 @@ function Renderer({
     }
 
     console.log(
-      `VRMA retarget ${modelLabel} / ${animationLabel}: ${retargeting.bindings.length} bindings, ${retargeting.clips.length} clips, ${retargeting.clips[0]?.channels.length ?? 0} channels, ${retargeting.clips[0]?.duration ?? 0}s`
+      `VRMA retarget ${modelLabel} / ${animationLabel}: ${retargeting.bindings.length} bindings, ${retargeting.expressionBindings.length} expression bindings, ${retargeting.clips.length} clips, ${retargeting.clips[0]?.channels.length ?? 0} channels, ${retargeting.clips[0]?.duration ?? 0}s`
     )
     console.log(
       `VRM compatibility ${modelLabel}: version=${retargeting.compatibility.version}, bones=${retargeting.compatibility.humanoidBoneCount}, unsupported=${retargeting.compatibility.unsupportedExtensions.join(',') || 'none'}, fallback=${retargeting.compatibility.fallbackExtensions.join(',') || 'none'}`
@@ -103,6 +103,7 @@ function Renderer({
             sourceAsset={vrmAnimation.sourceAsset}
             targetModel={vrmModel}
             bindings={vrmAnimation.retargeting.bindings}
+            expressionBindings={vrmAnimation.retargeting.expressionBindings}
             targetVersion={vrmAnimation.retargeting.targetVersion}
           />
         )}

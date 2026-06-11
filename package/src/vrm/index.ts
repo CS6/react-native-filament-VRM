@@ -1,5 +1,6 @@
 export * from './animation'
 export * from './compatibility'
+export * from './expressions'
 export * from './gltf'
 export * from './humanoid'
 export * from './materialFallback'

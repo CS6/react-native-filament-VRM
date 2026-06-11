@@ -52,6 +52,7 @@ function Avatar() {
           sourceAsset={animation.sourceAsset}
           targetModel={model}
           bindings={animation.retargeting.bindings}
+          expressionBindings={animation.retargeting.expressionBindings}
           targetVersion={animation.retargeting.targetVersion}
         />
       )}
@@ -88,6 +89,7 @@ function Avatar() {
           sourceAsset={animation.sourceAsset}
           targetModel={model}
           bindings={animation.retargeting.bindings}
+          expressionBindings={animation.retargeting.expressionBindings}
           targetVersion={animation.retargeting.targetVersion}
         />
       )}
@@ -143,6 +145,18 @@ VRM 1.0 files commonly use `VRMC_materials_mtoon`, `VRMC_node_constraint`, and `
 
 Material fallback should not modify humanoid metadata used for retargeting. Read humanoid and compatibility metadata from the original VRM file, then render a patched fallback GLB only for material compatibility.
 
+## Expressions
+
+VRMA expressions are represented as glTF translation tracks on expression proxy nodes. The X component of the animated translation is interpreted as the expression weight.
+
+`useVRMAnimation` returns `expressionBindings` that map those VRMA expression proxy nodes to the target VRM model's morph target binds:
+
+- VRM 1.0: `extensions.VRMC_vrm.expressions.preset/custom.*.morphTargetBinds`.
+- VRM 0.x: `extensions.VRM.blendShapeMaster.blendShapeGroups[*].binds`.
+- VRM 0.x preset names are normalized to VRM 1.0 names, for example `a` to `aa`, `i` to `ih`, `blink_l` to `blinkLeft`.
+
+The retargeter applies morph target weights each frame through Filament's renderable manager. Texture transform binds, material color binds, and expression override rules are not applied yet.
+
 ## Known gaps
 
-The current retargeting path covers humanoid FK animation and hips translation. Full VRM extension support still requires separate handling for expressions, look-at, node constraints, and spring bones.
+The current retargeting path covers humanoid FK animation, hips translation, and expression morph target weights. Full VRM extension support still requires separate handling for look-at, node constraints, spring bones, expression texture transform binds, and expression material color binds.

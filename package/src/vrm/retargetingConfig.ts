@@ -1,6 +1,7 @@
 import type { BufferSource } from '../hooks/useBuffer'
 import { getGltfAnimationClips } from './animation'
 import { getVRMCompatibilityReport } from './compatibility'
+import { createVRMExpressionBindings } from './expressions'
 import { loadGltfDocument, loadGltfJson } from './gltf'
 import { createVRMHumanoidBindings, getVRMAHumanoidRestPose, getVRMHumanoidRestPose } from './humanoid'
 import type { VRMAnimationRetargeting, VRMGltfDocument, VRMGltfJson } from './types'
@@ -10,6 +11,7 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
 
   return {
     bindings: createVRMHumanoidBindings(getVRMAHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
+    expressionBindings: createVRMExpressionBindings(vrmaDocument.json, vrmGltf),
     clips: getGltfAnimationClips(vrmaDocument),
     compatibility,
     targetVersion: compatibility.version,

@@ -106,6 +106,13 @@ export interface VRMGltfJson {
   }>
   extensions?: {
     VRM?: {
+      blendShapeMaster?: {
+        blendShapeGroups?: Array<{
+          binds?: VRMExpressionMorphTargetBind[]
+          name?: string
+          presetName?: string
+        }>
+      }
       humanoid?: {
         humanBones?: Array<{
           bone?: string
@@ -114,11 +121,19 @@ export interface VRMGltfJson {
       }
     }
     VRMC_vrm?: {
+      expressions?: {
+        preset?: Partial<Record<string, VRMExpressionDefinition>>
+        custom?: Record<string, VRMExpressionDefinition>
+      }
       humanoid?: {
         humanBones?: Partial<Record<VRMHumanoidBoneName, { node?: number }>>
       }
     }
     VRMC_vrm_animation?: {
+      expressions?: {
+        preset?: Partial<Record<string, { node?: number }>>
+        custom?: Record<string, { node?: number }>
+      }
       humanoid?: {
         humanBones?: Partial<Record<VRMHumanoidBoneName, { node?: number }>>
       }
@@ -138,8 +153,12 @@ export interface VRMGltfJson {
       roughnessFactor?: number
     }
   }>
+  meshes?: Array<{
+    name?: string
+  }>
   nodes?: Array<{
     children?: number[]
+    mesh?: number
     name?: string
     rotation?: Float4
   }>
@@ -147,6 +166,25 @@ export interface VRMGltfJson {
   scenes?: Array<{
     nodes?: number[]
   }>
+}
+
+export interface VRMExpressionDefinition {
+  morphTargetBinds?: VRMExpressionMorphTargetBind[]
+}
+
+export interface VRMExpressionMorphTargetBind {
+  index?: number
+  mesh?: number
+  node?: number
+  weight?: number
+}
+
+export interface VRMExpressionBinding {
+  expressionName: string
+  sourceName: string
+  targetName: string
+  morphTargetIndex: number
+  weight: number
 }
 
 export interface VRMGltfDocument {
@@ -243,10 +281,18 @@ export interface VRMRetargetSource {
   sourceRestWorldRotation: Float4
 }
 
+export interface VRMExpressionRetargetBinding {
+  source: Entity
+  target: Entity
+  morphTargetIndex: number
+  weight: number
+}
+
 export interface VRMAnimationRetargeterProps {
   sourceAsset: FilamentAsset
   targetModel: LoadedFilamentModel
   bindings: VRMHumanoidBinding[]
+  expressionBindings?: VRMExpressionBinding[]
   animationIndex?: number
   enabled?: boolean
   targetVersion?: VRMVersion
@@ -254,6 +300,7 @@ export interface VRMAnimationRetargeterProps {
 
 export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
+  expressionBindings: VRMExpressionBinding[]
   clips: VRMGltfAnimationClip[]
   compatibility: VRMCompatibilityReport
   targetVersion: VRMVersion

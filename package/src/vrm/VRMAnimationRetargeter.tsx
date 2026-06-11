@@ -3,7 +3,7 @@ import { RenderCallbackContext } from '../react/RenderCallbackContext'
 import { useAnimator } from '../hooks/useAnimator'
 import { useFilamentContext } from '../hooks/useFilamentContext'
 import type { Entity } from '../types'
-import type { VRMAnimationRetargeterProps, VRMRetargetBinding } from './types'
+import type { VRMAnimationRetargeterProps, VRMExpressionRetargetBinding, VRMRetargetBinding } from './types'
 import { denormalizeLocalRotation, flipVRM0NormalizedRotation, multiplyQuat, normalizeLocalRotation, scaleTranslationDelta } from './retargeting'
 
 function getEntityMap(entities: Entity[], getEntityName: (entity: Entity) => string | undefined) {
@@ -14,13 +14,14 @@ export function VRMAnimationRetargeter({
   sourceAsset,
   targetModel,
   bindings,
+  expressionBindings = [],
   animationIndex = 0,
   enabled = true,
   targetVersion,
 }: VRMAnimationRetargeterProps) {
   const sourceAnimator = useAnimator(sourceAsset)
   const targetAnimator = useAnimator(targetModel)
-  const { nameComponentManager, transformManager } = useFilamentContext()
+  const { nameComponentManager, renderableManager, transformManager } = useFilamentContext()
 
   const retargetBindings = React.useMemo<VRMRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -87,6 +88,26 @@ export function VRMAnimationRetargeter({
     )
   }, [bindings, nameComponentManager, sourceAsset, targetModel, transformManager])
 
+  const retargetExpressionBindings = React.useMemo<VRMExpressionRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return expressionBindings.flatMap(({ sourceName, targetName, morphTargetIndex, weight }) => {
+      const source = sourceEntities.get(sourceName)
+      const target = targetEntities.get(targetName)
+      if (source == null || target == null) return []
+
+      return [
+        {
+          source,
+          target,
+          morphTargetIndex,
+          weight,
+        },
+      ]
+    })
+  }, [expressionBindings, nameComponentManager, sourceAsset, targetModel])
+
   RenderCallbackContext.useRenderCallback(
     ({ passedSeconds }) => {
       'worklet'
@@ -137,9 +158,25 @@ export function VRMAnimationRetargeter({
       }
       transformManager.commitLocalTransformTransaction()
 
+      for (const binding of retargetExpressionBindings) {
+        const sourceTransform = transformManager.getTransform(binding.source)
+        const weight = Math.max(0, Math.min(1, sourceTransform.translation[0])) * binding.weight
+        renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
+      }
+
       targetAnimator.updateBoneMatrices()
     },
-    [animationIndex, enabled, sourceAnimator, targetAnimator, transformManager, retargetBindings, targetVersion]
+    [
+      animationIndex,
+      enabled,
+      sourceAnimator,
+      targetAnimator,
+      transformManager,
+      renderableManager,
+      retargetBindings,
+      retargetExpressionBindings,
+      targetVersion,
+    ]
   )
 
   return null
