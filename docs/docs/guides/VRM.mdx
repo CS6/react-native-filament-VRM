@@ -202,6 +202,8 @@ Currently supported:
 - `aim`: rotates the target from its rest rotation so its configured aim axis points at the source in world coordinates.
 - `roll`: transfers source roll around the configured destination roll axis, respecting the constraint weight.
 
+Seed-san's mechanical arm is represented this way. It is not part of the humanoid bone table; the VRM declares 23 `rotation` constraints from the left shoulder, arm, hand, palm, thumb, and finger bones to matching `robo_*` nodes. This makes the accessory arm follow the humanoid animation after retargeting.
+
 ## Spring Bones
 
 VRM 1.0 spring bones are runtime physics chains declared by `extensions.VRMC_springBone`. `useVRMAnimation` returns `springBoneBindings`, and `VRMAnimationRetargeter` applies them after humanoid retargeting and node constraints.
@@ -213,6 +215,13 @@ Currently supported:
 - Optional spring `center` nodes so simulation is performed in the model's intended center space.
 
 Seed-san uses this for hair springs and the `RoboWire` chain behind the mechanical arm.
+
+Seed-san validation notes:
+
+- 9 spring groups are declared.
+- `RoboWire` is a 7-joint chain from `robo_wire` through `robo_wire_end`, which becomes 6 simulated segments.
+- The asset declares 8 colliders in 2 collider groups.
+- Hair springs use `hips` as their center node; `RoboWire` has no explicit center and is simulated in model space.
 
 ## Known gaps
 
