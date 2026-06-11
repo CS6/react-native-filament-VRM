@@ -3,8 +3,15 @@ import { RenderCallbackContext } from '../react/RenderCallbackContext'
 import { useAnimator } from '../hooks/useAnimator'
 import { useFilamentContext } from '../hooks/useFilamentContext'
 import type { Entity } from '../types'
-import type { VRMAnimationRetargeterProps, VRMExpressionRetargetBinding, VRMRetargetBinding } from './types'
-import { denormalizeLocalRotation, flipVRM0NormalizedRotation, multiplyQuat, normalizeLocalRotation, scaleTranslationDelta } from './retargeting'
+import type { VRMAnimationRetargeterProps, VRMExpressionRetargetBinding, VRMNodeConstraintRetargetBinding, VRMRetargetBinding } from './types'
+import {
+  denormalizeLocalRotation,
+  flipVRM0NormalizedRotation,
+  multiplyQuat,
+  normalizeLocalRotation,
+  retargetRotationConstraint,
+  scaleTranslationDelta,
+} from './retargeting'
 
 function getEntityMap(entities: Entity[], getEntityName: (entity: Entity) => string | undefined) {
   return new Map(entities.map((entity) => [getEntityName(entity), entity]))
@@ -15,6 +22,7 @@ export function VRMAnimationRetargeter({
   targetModel,
   bindings,
   expressionBindings = [],
+  nodeConstraintBindings = [],
   animationIndex = 0,
   enabled = true,
   targetVersion,
@@ -108,10 +116,40 @@ export function VRMAnimationRetargeter({
     })
   }, [expressionBindings, nameComponentManager, sourceAsset, targetModel])
 
+  const retargetNodeConstraintBindings = React.useMemo<VRMNodeConstraintRetargetBinding[]>(() => {
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return nodeConstraintBindings.flatMap(({ sourceName, targetName, sourceRestLocalRotation, targetRestLocalRotation, weight }) => {
+      const source = targetEntities.get(sourceName)
+      const target = targetEntities.get(targetName)
+      if (source == null || target == null) return []
+
+      const targetRestTransform = transformManager.getTransform(target)
+      return [
+        {
+          source,
+          target,
+          weight,
+          sourceRestLocalRotation,
+          targetRestTranslation: targetRestTransform.translation,
+          targetRestLocalRotation,
+          targetRestScale: targetRestTransform.scale,
+        },
+      ]
+    })
+  }, [nameComponentManager, nodeConstraintBindings, targetModel, transformManager])
+
   RenderCallbackContext.useRenderCallback(
     ({ passedSeconds }) => {
       'worklet'
-      if (!enabled || sourceAnimator == null || targetAnimator == null || retargetBindings.length === 0) return
+      if (
+        !enabled ||
+        sourceAnimator == null ||
+        targetAnimator == null ||
+        (retargetBindings.length === 0 && retargetExpressionBindings.length === 0 && retargetNodeConstraintBindings.length === 0)
+      ) {
+        return
+      }
 
       const animationDuration = sourceAnimator.getAnimationDuration(animationIndex)
       const animationTime = animationDuration > 0 ? passedSeconds % animationDuration : passedSeconds
@@ -158,6 +196,19 @@ export function VRMAnimationRetargeter({
       }
       transformManager.commitLocalTransformTransaction()
 
+      transformManager.openLocalTransformTransaction()
+      for (const binding of retargetNodeConstraintBindings) {
+        const sourceTransform = transformManager.getTransform(binding.source)
+        const targetRotation = retargetRotationConstraint(
+          sourceTransform.rotationQuaternion,
+          binding.sourceRestLocalRotation,
+          binding.targetRestLocalRotation,
+          binding.weight
+        )
+        transformManager.setTransformFromTRS(binding.target, binding.targetRestTranslation, targetRotation, binding.targetRestScale)
+      }
+      transformManager.commitLocalTransformTransaction()
+
       for (const binding of retargetExpressionBindings) {
         const sourceTransform = transformManager.getTransform(binding.source)
         const weight = Math.max(0, Math.min(1, sourceTransform.translation[0])) * binding.weight
@@ -175,6 +226,7 @@ export function VRMAnimationRetargeter({
       renderableManager,
       retargetBindings,
       retargetExpressionBindings,
+      retargetNodeConstraintBindings,
       targetVersion,
     ]
   )

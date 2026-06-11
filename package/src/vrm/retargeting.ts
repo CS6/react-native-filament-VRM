@@ -22,6 +22,41 @@ export function multiplyQuat(a: Float4, b: Float4): Float4 {
   ])
 }
 
+export function slerpQuat(a: Float4, b: Float4, t: number): Float4 {
+  'worklet'
+  let bx = b[0]
+  let by = b[1]
+  let bz = b[2]
+  let bw = b[3]
+  let dot = a[0] * bx + a[1] * by + a[2] * bz + a[3] * bw
+
+  if (dot < 0) {
+    dot = -dot
+    bx = -bx
+    by = -by
+    bz = -bz
+    bw = -bw
+  }
+
+  if (dot > 0.9995) {
+    return normalizeQuat([
+      a[0] + t * (bx - a[0]),
+      a[1] + t * (by - a[1]),
+      a[2] + t * (bz - a[2]),
+      a[3] + t * (bw - a[3]),
+    ])
+  }
+
+  const theta0 = Math.acos(Math.max(-1, Math.min(1, dot)))
+  const theta = theta0 * t
+  const sinTheta = Math.sin(theta)
+  const sinTheta0 = Math.sin(theta0)
+  const scaleA = Math.cos(theta) - dot * sinTheta / sinTheta0
+  const scaleB = sinTheta / sinTheta0
+
+  return normalizeQuat([scaleA * a[0] + scaleB * bx, scaleA * a[1] + scaleB * by, scaleA * a[2] + scaleB * bz, scaleA * a[3] + scaleB * bw])
+}
+
 export function scaleTranslationDelta(animated: Float3, rest: Float3, targetRest: Float3, scale: number, flipXZ = false): Float3 {
   'worklet'
   const x = (animated[0] - rest[0]) * scale
@@ -38,6 +73,18 @@ export function scaleTranslationDelta(animated: Float3, rest: Float3, targetRest
 export function flipVRM0NormalizedRotation(rotation: Float4): Float4 {
   'worklet'
   return [-rotation[0], rotation[1], -rotation[2], rotation[3]]
+}
+
+export function retargetRotationConstraint(
+  sourceAnimatedLocalRotation: Float4,
+  sourceRestLocalRotation: Float4,
+  targetRestLocalRotation: Float4,
+  weight: number
+): Float4 {
+  'worklet'
+  const delta = multiplyQuat(invertQuat(sourceRestLocalRotation), sourceAnimatedLocalRotation)
+  const weightedDelta = weight >= 1 ? delta : slerpQuat([0, 0, 0, 1], delta, Math.max(0, Math.min(1, weight)))
+  return multiplyQuat(targetRestLocalRotation, weightedDelta)
 }
 
 export function retargetLocalRotation(

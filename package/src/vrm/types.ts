@@ -158,6 +158,18 @@ export interface VRMGltfJson {
   }>
   nodes?: Array<{
     children?: number[]
+    extensions?: {
+      VRMC_node_constraint?: {
+        constraint?: {
+          aim?: unknown
+          roll?: unknown
+          rotation?: {
+            source?: number
+            weight?: number
+          }
+        }
+      }
+    }
     mesh?: number
     name?: string
     rotation?: Float4
@@ -185,6 +197,14 @@ export interface VRMExpressionBinding {
   targetName: string
   morphTargetIndex: number
   weight: number
+}
+
+export interface VRMNodeConstraintBinding {
+  sourceName: string
+  targetName: string
+  weight: number
+  sourceRestLocalRotation: Float4
+  targetRestLocalRotation: Float4
 }
 
 export interface VRMGltfDocument {
@@ -288,11 +308,22 @@ export interface VRMExpressionRetargetBinding {
   weight: number
 }
 
+export interface VRMNodeConstraintRetargetBinding {
+  source: Entity
+  target: Entity
+  weight: number
+  sourceRestLocalRotation: Float4
+  targetRestTranslation: Float3
+  targetRestLocalRotation: Float4
+  targetRestScale: Float3
+}
+
 export interface VRMAnimationRetargeterProps {
   sourceAsset: FilamentAsset
   targetModel: LoadedFilamentModel
   bindings: VRMHumanoidBinding[]
   expressionBindings?: VRMExpressionBinding[]
+  nodeConstraintBindings?: VRMNodeConstraintBinding[]
   animationIndex?: number
   enabled?: boolean
   targetVersion?: VRMVersion
@@ -301,6 +332,7 @@ export interface VRMAnimationRetargeterProps {
 export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
   expressionBindings: VRMExpressionBinding[]
+  nodeConstraintBindings: VRMNodeConstraintBinding[]
   clips: VRMGltfAnimationClip[]
   compatibility: VRMCompatibilityReport
   targetVersion: VRMVersion
