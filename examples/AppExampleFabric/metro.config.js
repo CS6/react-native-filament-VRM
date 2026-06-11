@@ -7,7 +7,7 @@ const modules = Object.keys({ ...pak.peerDependencies })
 
 const defaultConfig = getDefaultConfig(__dirname)
 
-const assetExts = [...defaultConfig.resolver.assetExts, 'glb', 'ktx', 'filamat']
+const assetExts = [...defaultConfig.resolver.assetExts, 'glb', 'vrm', 'vrma', 'ktx', 'filamat']
 const assetPath = path.join(__dirname, '..', 'Shared', 'assets')
 const assetFilesMap = {}
 

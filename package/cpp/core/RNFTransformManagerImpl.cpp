@@ -88,6 +88,32 @@ void TransformManagerImpl::setEntityScale(Entity entity, std::vector<double> sca
   updateTransform(scaleMatrix, entity, multiplyCurrent);
 }
 
+void TransformManagerImpl::setTransformFromTRS(Entity entity, std::vector<double> translationVec, std::vector<double> rotationQuatVec,
+                                               std::vector<double> scaleVec) {
+  std::unique_lock lock(_mutex);
+  if (rotationQuatVec.size() != 4) {
+    throw std::invalid_argument("Rotation quaternion must have 4 elements in [x, y, z, w] order");
+  }
+
+  math::float3 translation = Converter::VecToFloat3(translationVec);
+  math::float3 scale = Converter::VecToFloat3(scaleVec);
+  math::quatf rotation =
+      math::quatf((float)rotationQuatVec[3], (float)rotationQuatVec[0], (float)rotationQuatVec[1], (float)rotationQuatVec[2]);
+
+  const float length = std::sqrt(rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w);
+  if (length == 0) {
+    rotation = math::quatf(1.0f, 0.0f, 0.0f, 0.0f);
+  } else {
+    rotation = math::quatf(rotation.w / length, rotation.x / length, rotation.y / length, rotation.z / length);
+  }
+
+  math::mat4f transform = math::mat4f::translation(translation) * math::mat4f(rotation) * math::mat4f::scaling(scale);
+
+  TransformManager& transformManager = _engine->getTransformManager();
+  TransformManager::Instance instance = getInstance(entity, transformManager);
+  transformManager.setTransform(instance, transform);
+}
+
 void TransformManagerImpl::updateTransformByRigidBody(Entity entity, std::shared_ptr<RigidBodyWrapper> rigidBody) {
   std::unique_lock lock(_mutex);
   if (!rigidBody) {

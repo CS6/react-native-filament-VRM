@@ -16,6 +16,7 @@ void TransformManagerWrapper::loadHybridMethods() {
   registerHybridMethod("setEntityPosition", &TransformManagerWrapper::setEntityPosition, this);
   registerHybridMethod("setEntityRotation", &TransformManagerWrapper::setEntityRotation, this);
   registerHybridMethod("setEntityScale", &TransformManagerWrapper::setEntityScale, this);
+  registerHybridMethod("setTransformFromTRS", &TransformManagerWrapper::setTransformFromTRS, this);
   registerHybridMethod("updateTransformByRigidBody", &TransformManagerWrapper::updateTransformByRigidBody, this);
   registerHybridMethod("transformToUnitCube", &TransformManagerWrapper::transformToUnitCube, this);
 }
@@ -54,6 +55,11 @@ void TransformManagerWrapper::setEntityScale(std::shared_ptr<EntityWrapper> enti
                                              bool multiplyCurrent) {
   Entity entity = getEntity(entityWrapper);
   pointee()->setEntityScale(entity, scaleVec, multiplyCurrent);
+}
+void TransformManagerWrapper::setTransformFromTRS(std::shared_ptr<EntityWrapper> entityWrapper, std::vector<double> translationVec,
+                                                  std::vector<double> rotationQuatVec, std::vector<double> scaleVec) {
+  Entity entity = getEntity(entityWrapper);
+  pointee()->setTransformFromTRS(entity, translationVec, rotationQuatVec, scaleVec);
 }
 void TransformManagerWrapper::updateTransformByRigidBody(std::shared_ptr<EntityWrapper> entityWrapper,
                                                          std::shared_ptr<RigidBodyWrapper> rigidBody) {

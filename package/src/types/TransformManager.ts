@@ -1,7 +1,7 @@
 import { RigidBody } from '../bullet'
 import { Entity } from './Entity'
 import { PointerHolder } from './PointerHolder'
-import { Float3 } from './Math'
+import { Float3, Float4 } from './Math'
 import { AABB } from './Boxes'
 
 /**
@@ -11,6 +11,10 @@ export interface Mat4 {
   readonly data: number[]
   readonly scale: Float3
   readonly translation: Float3
+  /**
+   * The normalized rotation quaternion in glTF order: [x, y, z, w].
+   */
+  readonly rotationQuaternion: Float4
 
   /**
    * Returns a new matrix that is the result of multiplying the provided scale matrix with this matrix.
@@ -121,6 +125,12 @@ export interface TransformManager extends PointerHolder {
    * @param multiplyCurrent If true, the new scale will be multiplied with the current transform.
    */
   setEntityScale(entity: Entity, scale: Float3, multiplyCurrent: boolean): void
+
+  /**
+   * Sets a local transform from translation, rotation quaternion, and scale.
+   * @param rotationQuaternion The normalized rotation quaternion in glTF order: [x, y, z, w].
+   */
+  setTransformFromTRS(entity: Entity, translation: Float3, rotationQuaternion: Float4, scale: Float3): void
 
   /**
    * Updates the transform of an entity based on the rigid body's transform.

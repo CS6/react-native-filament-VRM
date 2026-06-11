@@ -27,6 +27,8 @@ public:
   void setEntityPosition(Entity entity, std::vector<double> positionVec, bool multiplyCurrent);
   void setEntityRotation(Entity entity, double angleRadians, std::vector<double> axisVec, bool multiplyCurrent);
   void setEntityScale(Entity entity, std::vector<double> scaleVec, bool multiplyCurrent);
+  void setTransformFromTRS(Entity entity, std::vector<double> translationVec, std::vector<double> rotationQuatVec,
+                           std::vector<double> scaleVec);
   void updateTransformByRigidBody(Entity entity, std::shared_ptr<RigidBodyWrapper> rigidBody);
   void transformToUnitCube(Entity rootEntity, Aabb aabb);
 

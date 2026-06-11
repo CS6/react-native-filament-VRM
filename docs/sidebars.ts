@@ -10,6 +10,7 @@ const sidebars: SidebarsConfig = {
       "guides/skybox",
       "guides/camera",
       "guides/animator",
+      "guides/vrm",
       "guides/images",
       "guides/physics",
       "guides/instancing",

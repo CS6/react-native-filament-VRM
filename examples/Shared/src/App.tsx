@@ -21,6 +21,7 @@ import { ChangeMaterials } from './ChangeMaterials'
 import { SkyboxExample } from './SkyboxExample'
 import { MorphTargets } from './MorphTargets'
 import { ReanimatedRotation } from './ReanimatedRotation'
+import { VRMModel } from './VRMModel'
 
 function NavigationItem(props: { name: string; route: string }) {
   const navigation = useNavigation()
@@ -68,6 +69,7 @@ function HomeScreen() {
       <NavigationItem name="🎨 Change Materials" route="ChangeMaterials" />
       <NavigationItem name="☁️ Skybox" route="SkyboxExample" />
       <NavigationItem name="🔄 MorphTargets" route="MorphTargets" />
+      <NavigationItem name="🧍 VRM Model" route="VRMModel" />
     </ScrollView>
   )
 }
@@ -86,7 +88,7 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
-        <Stack.Navigator>
+        <Stack.Navigator initialRouteName="VRMModel">
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen
             name="AnimationTransitions"
@@ -112,6 +114,7 @@ function App() {
           <Stack.Screen name="Test" component={TestScreen} />
           <Stack.Screen name="SkyboxExample" component={SkyboxExample} />
           <Stack.Screen name="MorphTargets" component={MorphTargets} />
+          <Stack.Screen name="VRMModel" component={VRMModel} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

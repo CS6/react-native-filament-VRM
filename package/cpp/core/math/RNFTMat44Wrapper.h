@@ -32,6 +32,8 @@ private:
   std::vector<double> getScale();
   // Returns the translation of the matrix
   std::vector<double> getTranslation();
+  // Returns the normalized rotation quaternion in glTF order: [x, y, z, w]
+  std::vector<double> getRotationQuaternion();
 
 private:
   math::mat4f _matrix;

@@ -45,7 +45,7 @@ export type FilamentProviderProps = PropsWithChildren<
  * }
  * ```
  */
-export function FilamentScene({ children, fallback, config, backend, frameRateOptions, ...viewProps }: FilamentProviderProps) {
+export function FilamentScene({ children, fallback, config, backend, frameRateOptions, clearContent, ...viewProps }: FilamentProviderProps) {
   // First create the engine, which we need to create (almost) all other filament APIs
   const engine = useEngine({ config, backend, context: FilamentWorkletContext })
 
@@ -99,7 +99,7 @@ export function FilamentScene({ children, fallback, config, backend, frameRateOp
     }
   }, [engine, transformManager, renderableManager, scene, lightManager, view, camera, renderer, nameComponentManager, choreographer])
 
-  const rendererProps = useMemo(() => ({ frameRateOptions }), [frameRateOptions])
+  const rendererProps = useMemo(() => ({ frameRateOptions, clearContent }), [frameRateOptions, clearContent])
 
   // If the APIs aren't ready yet render the fallback component (or nothing)
   if (value == null) return fallback ?? null

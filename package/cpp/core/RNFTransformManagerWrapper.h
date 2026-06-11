@@ -26,6 +26,8 @@ private: // Exposed JS API:
   void setEntityPosition(std::shared_ptr<EntityWrapper> entity, std::vector<double> positionVec, bool multiplyCurrent);
   void setEntityRotation(std::shared_ptr<EntityWrapper> entity, double angleRadians, std::vector<double> axisVec, bool multiplyCurrent);
   void setEntityScale(std::shared_ptr<EntityWrapper> entity, std::vector<double> scaleVec, bool multiplyCurrent);
+  void setTransformFromTRS(std::shared_ptr<EntityWrapper> entity, std::vector<double> translationVec,
+                           std::vector<double> rotationQuatVec, std::vector<double> scaleVec);
   void updateTransformByRigidBody(std::shared_ptr<EntityWrapper> entityWrapper, std::shared_ptr<RigidBodyWrapper> rigidBody);
   void transformToUnitCube(std::shared_ptr<EntityWrapper> rootEntityWrapper, std::shared_ptr<AABBWrapper> aabbWrapper);
 

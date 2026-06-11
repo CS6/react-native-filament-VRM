@@ -1,0 +1,84 @@
+---
+id: vrm
+title: VRM and VRMA
+sidebar_label: VRM
+slug: /guides/vrm
+---
+
+# VRM and VRMA animation retargeting
+
+VRM support is implemented on top of glTF/GLB loading. A `.vrm` file is a GLB with VRM metadata, and a `.vrma` file is an animation-only GLB that uses `VRMC_vrm_animation`.
+
+## Asset extensions
+
+Metro must be configured to bundle VRM and VRMA files:
+
+```js
+module.exports = {
+  resolver: {
+    assetExts: ['glb', 'vrm', 'vrma'],
+  },
+}
+```
+
+## Retargeting model
+
+VRMA animation targets humanoid bones, not the destination model's raw node names. The loader reads both files, creates a humanoid binding table, and applies animation to the target model's matching humanoid bones.
+
+The retargeting path uses these inputs:
+
+- VRMA humanoid rest pose from `extensions.VRMC_vrm_animation.humanoid.humanBones`.
+- VRM 1.0 humanoid rest pose from `extensions.VRMC_vrm.humanoid.humanBones`.
+- VRM 0.x humanoid rest pose from `extensions.VRM.humanoid.humanBones`.
+- Source and target local/world rest rotations for each bound humanoid bone.
+
+## VRM 0.x axis compatibility
+
+VRM 0.x and VRM 1.0 do not use the same forward-facing convention. VRM 0.x requires the model to face `-Z`, while VRM 1.0 T-pose defines the visible model as facing `+Z`.
+
+When applying a VRMA animation to a VRM 0.x target, the animation values need the same compatibility conversion used by `@pixiv/three-vrm-animation`:
+
+- Quaternion rotation tracks: negate the `x` and `z` components.
+- Hips translation tracks: negate the `x` and `z` components.
+- Do not apply this conversion to VRM 1.0 targets.
+
+In quaternion form:
+
+```ts
+function convertVRM0Rotation([x, y, z, w]) {
+  return [-x, y, -z, w]
+}
+```
+
+In translation form:
+
+```ts
+function convertVRM0HipsTranslationDelta([x, y, z]) {
+  return [-x, y, -z]
+}
+```
+
+This conversion is intentionally target-version dependent. Applying it globally will make VRM 1.0 models such as Seed-san incorrect, while omitting it makes VRM 0.x models show mirrored or reversed upper-limb motion.
+
+## Validation matrix
+
+Use more than one model and more than one motion when validating retargeting. A single model can hide a bad axis assumption because its rest pose may cancel out the error.
+
+The current example uses:
+
+- `Seed-san.vrm`: VRM 1.0, expected to play VRMA without VRM0 axis conversion.
+- `AvatarSample_A.vrm`: VRM 0.x, expected to use VRM0 axis conversion.
+- `TkVrmViewerSample.vrm`: VRM 0.x sample from `tk256ailab/vrm-viewer`, expected to use VRM0 axis conversion.
+- `Jump.vrma`, `Relax.vrma`, `Clapping.vrma`, and `LookAround.vrma`: VRMA motions from `tk256ailab/vrm-viewer`.
+
+The most useful visual checks are crossed arms, foot direction, hips translation, and asymmetric hand motion. These reveal x/z sign mistakes faster than idle or small head motions.
+
+## Material fallback
+
+VRM 1.0 files commonly use `VRMC_materials_mtoon`, `VRMC_node_constraint`, and `VRMC_springBone`. glTF renderers can load the mesh while ignoring unsupported VRM runtime extensions, but MToon materials may need a fallback to ordinary glTF materials or `KHR_materials_unlit` so the model renders completely.
+
+Material fallback should not modify humanoid metadata used for retargeting. Read humanoid and compatibility metadata from the original VRM file, then render a patched fallback GLB only for material compatibility.
+
+## Known gaps
+
+The current retargeting path covers humanoid FK animation and hips translation. Full VRM extension support still requires separate handling for expressions, look-at, node constraints, and spring bones.

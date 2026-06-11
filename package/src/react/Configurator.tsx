@@ -23,6 +23,7 @@ export type ViewConfigProps = Partial<
 
 export type RendererConfigProps = {
   frameRateOptions?: FrameRateOptions
+  clearContent?: boolean
 }
 
 export type ConfiguratorProps = PropsWithChildren<{
@@ -84,12 +85,15 @@ export function Configurator({ rendererProps, viewProps, children }: Configurato
   ])
 
   // Apply renderer configs
-  const { frameRateOptions } = rendererProps ?? {}
+  const { frameRateOptions, clearContent } = rendererProps ?? {}
   useEffect(() => {
     if (frameRateOptions != null) {
       renderer.setFrameRateOptions(frameRateOptions)
     }
-  }, [renderer, frameRateOptions])
+    if (clearContent != null) {
+      renderer.setClearContent(clearContent)
+    }
+  }, [renderer, frameRateOptions, clearContent])
 
   return children
 }
