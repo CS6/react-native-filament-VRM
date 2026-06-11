@@ -4,7 +4,7 @@ import { getVRMCompatibilityReport } from './compatibility'
 import { createVRMExpressionBindings } from './expressions'
 import { loadGltfDocument, loadGltfJson } from './gltf'
 import { createVRMHumanoidBindings, getVRMAHumanoidRestPose, getVRMHumanoidRestPose } from './humanoid'
-import { createVRMLookAtExpressionBindings } from './lookAt'
+import { createVRMLookAtBoneBindings, createVRMLookAtExpressionBindings } from './lookAt'
 import { createVRMNodeConstraintBindings } from './nodeConstraints'
 import { createVRMSpringBoneBindings } from './springBone'
 import type { VRMAnimationRetargeting, VRMGltfDocument, VRMGltfJson } from './types'
@@ -15,6 +15,7 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
   return {
     bindings: createVRMHumanoidBindings(getVRMAHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
     expressionBindings: createVRMExpressionBindings(vrmaDocument.json, vrmGltf),
+    lookAtBoneBindings: createVRMLookAtBoneBindings(vrmaDocument.json, vrmGltf),
     lookAtExpressionBindings: createVRMLookAtExpressionBindings(vrmaDocument.json, vrmGltf),
     nodeConstraintBindings: createVRMNodeConstraintBindings(vrmGltf),
     springBoneBindings: createVRMSpringBoneBindings(vrmGltf),

@@ -42,9 +42,6 @@ export function getVRMCompatibilityReport(gltf: VRMGltfJson): VRMCompatibilityRe
   if (version === '1.0' && materialExtensions.includes('VRMC_materials_mtoon')) {
     warnings.push('VRM 1.0 MToon materials need an explicit fallback or custom material path.')
   }
-  if (gltf.extensions?.VRMC_vrm?.lookAt?.type === 'bone' || gltf.extensions?.VRM?.firstPerson?.lookAtTypeName === 'Bone') {
-    warnings.push('VRM bone-based LookAt is not applied yet; expression-based LookAt is supported.')
-  }
   return {
     version,
     humanoidBoneCount: getHumanoidBoneCount(gltf),

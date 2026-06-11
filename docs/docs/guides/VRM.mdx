@@ -53,6 +53,7 @@ function Avatar() {
           targetModel={model}
           bindings={animation.retargeting.bindings}
           expressionBindings={animation.retargeting.expressionBindings}
+          lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
           springBoneBindings={animation.retargeting.springBoneBindings}
@@ -93,6 +94,7 @@ function Avatar() {
           targetModel={model}
           bindings={animation.retargeting.bindings}
           expressionBindings={animation.retargeting.expressionBindings}
+          lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
           springBoneBindings={animation.retargeting.springBoneBindings}
@@ -165,9 +167,11 @@ The retargeter applies morph target weights each frame through Filament's render
 
 ## LookAt
 
-VRMA LookAt is represented as a rotation track on a look direction proxy node. For VRM 1.0 targets with `lookAt.type = "expression"`, `useVRMAnimation` returns `lookAtExpressionBindings` and `VRMAnimationRetargeter` maps yaw and pitch into `lookLeft`, `lookRight`, `lookUp`, and `lookDown` expression morph target weights.
+VRMA LookAt is represented as a rotation track on a look direction proxy node.
 
-Bone-based LookAt is not applied yet.
+For VRM 1.0 targets with `lookAt.type = "expression"`, `useVRMAnimation` returns `lookAtExpressionBindings` and `VRMAnimationRetargeter` maps yaw and pitch into `lookLeft`, `lookRight`, `lookUp`, and `lookDown` expression morph target weights.
+
+For VRM 1.0 targets with `lookAt.type = "bone"` and VRM 0.x targets with `firstPerson.lookAtTypeName = "Bone"`, `useVRMAnimation` returns `lookAtBoneBindings`. The retargeter maps yaw and pitch into `leftEye` and `rightEye` local rotations using horizontal inner/outer and vertical up/down range maps.
 
 ## Node Constraints
 
@@ -193,4 +197,4 @@ Seed-san uses this for hair springs and the `RoboWire` chain behind the mechanic
 
 ## Known gaps
 
-The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for bone-based LookAt, expression texture transform binds, and expression material color binds.
+The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression-based LookAt, VRM 1.0/0.x bone-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for expression texture transform binds and expression material color binds.

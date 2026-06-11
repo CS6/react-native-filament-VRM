@@ -7,6 +7,7 @@ import type { Entity, Float3, Float4 } from '../types'
 import type {
   VRMAnimationRetargeterProps,
   VRMExpressionRetargetBinding,
+  VRMLookAtBoneRetargetBinding,
   VRMLookAtExpressionRetargetBinding,
   VRMNodeConstraintRetargetBinding,
   VRMRetargetBinding,
@@ -109,6 +110,42 @@ function getLookAtWeight(direction: VRMLookAtExpressionRetargetBinding['directio
   return Math.max(0, -pitchDegrees)
 }
 
+function getRangeMappedAngle(value: number, inputMaxValue: number, outputScale: number): number {
+  'worklet'
+  if (inputMaxValue === 0) return value === 0 ? 0 : outputScale
+  return Math.min(Math.abs(value), Math.abs(inputMaxValue)) / Math.abs(inputMaxValue) * outputScale
+}
+
+function quatFromAxisAngle(axis: Float3, angleDegrees: number): Float4 {
+  'worklet'
+  const angle = (angleDegrees * Math.PI) / 180
+  const half = angle / 2
+  const sin = Math.sin(half)
+  return [axis[0] * sin, axis[1] * sin, axis[2] * sin, Math.cos(half)]
+}
+
+function getLookAtBoneLocalRotation(binding: VRMLookAtBoneRetargetBinding, pitchDegrees: number, yawDegrees: number): Float4 {
+  'worklet'
+  const horizontal =
+    binding.eye === 'left'
+      ? yawDegrees > 0
+        ? binding.horizontalOuter
+        : binding.horizontalInner
+      : yawDegrees > 0
+        ? binding.horizontalInner
+        : binding.horizontalOuter
+  const yawSign = yawDegrees >= 0 ? 1 : -1
+  const yaw = getRangeMappedAngle(yawDegrees, horizontal.inputMaxValue, horizontal.outputScale) * yawSign
+
+  const vertical = pitchDegrees > 0 ? binding.verticalDown : binding.verticalUp
+  const pitchSign = pitchDegrees >= 0 ? 1 : -1
+  const pitch = getRangeMappedAngle(pitchDegrees, vertical.inputMaxValue, vertical.outputScale) * pitchSign
+
+  const yawRotation = quatFromAxisAngle([0, 1, 0], yaw)
+  const pitchRotation = quatFromAxisAngle([1, 0, 0], pitch)
+  return multiplyQuat(binding.targetRestLocalRotation, multiplyQuat(yawRotation, pitchRotation))
+}
+
 function isAimAxis(axis: string | undefined): axis is 'PositiveX' | 'NegativeX' | 'PositiveY' | 'NegativeY' | 'PositiveZ' | 'NegativeZ' {
   return (
     axis === 'PositiveX' ||
@@ -125,6 +162,7 @@ export function VRMAnimationRetargeter({
   targetModel,
   bindings,
   expressionBindings = [],
+  lookAtBoneBindings = [],
   lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
   springBoneBindings = [],
@@ -221,6 +259,28 @@ export function VRMAnimationRetargeter({
       ]
     })
   }, [expressionBindings, nameComponentManager, sourceAsset, targetModel])
+
+  const retargetLookAtBoneBindings = React.useMemo<VRMLookAtBoneRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return lookAtBoneBindings.flatMap((binding) => {
+      const source = sourceEntities.get(binding.sourceName)
+      const target = targetEntities.get(binding.targetName)
+      if (source == null || target == null) return []
+
+      const targetRestTransform = transformManager.getTransform(target)
+      return [
+        {
+          ...binding,
+          source,
+          target,
+          targetRestTranslation: targetRestTransform.translation,
+          targetRestScale: targetRestTransform.scale,
+        },
+      ]
+    })
+  }, [lookAtBoneBindings, nameComponentManager, sourceAsset, targetModel, transformManager])
 
   const retargetLookAtExpressionBindings = React.useMemo<VRMLookAtExpressionRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -334,6 +394,7 @@ export function VRMAnimationRetargeter({
         targetAnimator == null ||
         (retargetBindings.length === 0 &&
           retargetExpressionBindings.length === 0 &&
+          retargetLookAtBoneBindings.length === 0 &&
           retargetLookAtExpressionBindings.length === 0 &&
           retargetNodeConstraintBindings.length === 0 &&
           retargetSpringBoneBindings.length === 0)
@@ -486,6 +547,13 @@ export function VRMAnimationRetargeter({
         renderableManager.setMorphWeights(binding.target, [weight], binding.morphTargetIndex)
       }
 
+      for (const binding of retargetLookAtBoneBindings) {
+        const sourceTransform = transformManager.getTransform(binding.source)
+        const { pitchDegrees, yawDegrees } = getLookAtAngles(sourceTransform.rotationQuaternion)
+        const targetRotation = getLookAtBoneLocalRotation(binding, pitchDegrees, yawDegrees)
+        transformManager.setTransformFromTRS(binding.target, binding.targetRestTranslation, targetRotation, binding.targetRestScale)
+      }
+
       targetAnimator.updateBoneMatrices()
     },
     [
@@ -497,6 +565,7 @@ export function VRMAnimationRetargeter({
       renderableManager,
       retargetBindings,
       retargetExpressionBindings,
+      retargetLookAtBoneBindings,
       retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,
       retargetSpringBoneBindings,

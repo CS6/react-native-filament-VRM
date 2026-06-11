@@ -9,6 +9,8 @@ export type VRMHumanoidBoneName =
   | 'upperChest'
   | 'neck'
   | 'head'
+  | 'leftEye'
+  | 'rightEye'
   | 'leftShoulder'
   | 'leftUpperArm'
   | 'leftLowerArm'
@@ -120,7 +122,13 @@ export interface VRMGltfJson {
         }>
       }
       firstPerson?: {
+        firstPersonBone?: number
+        firstPersonBoneOffset?: { x?: number; y?: number; z?: number }
+        lookAtHorizontalInner?: VRM0LookAtRangeMap
+        lookAtHorizontalOuter?: VRM0LookAtRangeMap
         lookAtTypeName?: string
+        lookAtVerticalDown?: VRM0LookAtRangeMap
+        lookAtVerticalUp?: VRM0LookAtRangeMap
       }
     }
     VRMC_vrm?: {
@@ -218,6 +226,7 @@ export interface VRMExpressionBinding {
 }
 
 export interface VRMLookAtDefinition {
+  offsetFromHeadBone?: Float3
   rangeMapHorizontalInner?: VRMLookAtRangeMap
   rangeMapHorizontalOuter?: VRMLookAtRangeMap
   rangeMapVerticalDown?: VRMLookAtRangeMap
@@ -230,6 +239,11 @@ export interface VRMLookAtRangeMap {
   outputScale?: number
 }
 
+export interface VRM0LookAtRangeMap {
+  xRange?: number
+  yRange?: number
+}
+
 export interface VRMLookAtExpressionBinding {
   sourceName: string
   direction: 'left' | 'right' | 'up' | 'down'
@@ -238,6 +252,17 @@ export interface VRMLookAtExpressionBinding {
   weight: number
   inputMaxValue: number
   outputScale: number
+}
+
+export interface VRMLookAtBoneBinding {
+  eye: 'left' | 'right'
+  sourceName: string
+  targetName: string
+  targetRestLocalRotation: Float4
+  horizontalInner: Required<VRMLookAtRangeMap>
+  horizontalOuter: Required<VRMLookAtRangeMap>
+  verticalDown: Required<VRMLookAtRangeMap>
+  verticalUp: Required<VRMLookAtRangeMap>
 }
 
 export interface VRMNodeConstraintBinding {
@@ -441,6 +466,19 @@ export interface VRMLookAtExpressionRetargetBinding {
   outputScale: number
 }
 
+export interface VRMLookAtBoneRetargetBinding {
+  eye: 'left' | 'right'
+  source: Entity
+  target: Entity
+  targetRestLocalRotation: Float4
+  targetRestTranslation: Float3
+  targetRestScale: Float3
+  horizontalInner: Required<VRMLookAtRangeMap>
+  horizontalOuter: Required<VRMLookAtRangeMap>
+  verticalDown: Required<VRMLookAtRangeMap>
+  verticalUp: Required<VRMLookAtRangeMap>
+}
+
 export interface VRMNodeConstraintRetargetBinding {
   axis?: VRMNodeConstraintAimAxis | VRMNodeConstraintRollAxis
   source: Entity
@@ -494,6 +532,7 @@ export interface VRMAnimationRetargeterProps {
   targetModel: LoadedFilamentModel
   bindings: VRMHumanoidBinding[]
   expressionBindings?: VRMExpressionBinding[]
+  lookAtBoneBindings?: VRMLookAtBoneBinding[]
   lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
   springBoneBindings?: VRMSpringBoneBinding[]
@@ -505,6 +544,7 @@ export interface VRMAnimationRetargeterProps {
 export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
   expressionBindings: VRMExpressionBinding[]
+  lookAtBoneBindings: VRMLookAtBoneBinding[]
   lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]
   springBoneBindings: VRMSpringBoneBinding[]

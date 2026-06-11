@@ -82,7 +82,7 @@ function Renderer({
     }
 
     console.log(
-      `VRMA retarget ${modelLabel} / ${animationLabel}: ${retargeting.bindings.length} bindings, ${retargeting.expressionBindings.length} expression bindings, ${retargeting.lookAtExpressionBindings.length} lookAt bindings, ${retargeting.nodeConstraintBindings.length} node constraints, ${retargeting.springBoneBindings.length} spring bones, ${retargeting.clips.length} clips, ${retargeting.clips[0]?.channels.length ?? 0} channels, ${retargeting.clips[0]?.duration ?? 0}s`
+      `VRMA retarget ${modelLabel} / ${animationLabel}: ${retargeting.bindings.length} bindings, ${retargeting.expressionBindings.length} expression bindings, ${retargeting.lookAtBoneBindings.length} bone lookAt bindings, ${retargeting.lookAtExpressionBindings.length} expression lookAt bindings, ${retargeting.nodeConstraintBindings.length} node constraints, ${retargeting.springBoneBindings.length} spring bones, ${retargeting.clips.length} clips, ${retargeting.clips[0]?.channels.length ?? 0} channels, ${retargeting.clips[0]?.duration ?? 0}s`
     )
     console.log(
       `VRM compatibility ${modelLabel}: version=${retargeting.compatibility.version}, bones=${retargeting.compatibility.humanoidBoneCount}, unsupported=${retargeting.compatibility.unsupportedExtensions.join(',') || 'none'}, fallback=${retargeting.compatibility.fallbackExtensions.join(',') || 'none'}`
@@ -104,6 +104,7 @@ function Renderer({
             targetModel={vrmModel}
             bindings={vrmAnimation.retargeting.bindings}
             expressionBindings={vrmAnimation.retargeting.expressionBindings}
+            lookAtBoneBindings={vrmAnimation.retargeting.lookAtBoneBindings}
             lookAtExpressionBindings={vrmAnimation.retargeting.lookAtExpressionBindings}
             nodeConstraintBindings={vrmAnimation.retargeting.nodeConstraintBindings}
             springBoneBindings={vrmAnimation.retargeting.springBoneBindings}

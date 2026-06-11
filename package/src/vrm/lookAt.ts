@@ -1,4 +1,5 @@
-import type { VRMGltfJson, VRMLookAtExpressionBinding, VRMLookAtRangeMap } from './types'
+import { getVRMHumanoidRestPose } from './humanoid'
+import type { VRM0LookAtRangeMap, VRMGltfJson, VRMLookAtBoneBinding, VRMLookAtExpressionBinding, VRMLookAtRangeMap } from './types'
 
 const LOOK_AT_EXPRESSION_NAMES = {
   down: 'lookDown',
@@ -19,6 +20,13 @@ function getRangeMap(rangeMap: VRMLookAtRangeMap | undefined): Required<VRMLookA
   }
 }
 
+function getVRM0RangeMap(rangeMap: VRM0LookAtRangeMap | undefined): Required<VRMLookAtRangeMap> {
+  return {
+    inputMaxValue: rangeMap?.xRange ?? 90,
+    outputScale: rangeMap?.yRange ?? 0,
+  }
+}
+
 export function createVRMLookAtExpressionBindings(sourceGltf: VRMGltfJson, targetGltf: VRMGltfJson): VRMLookAtExpressionBinding[] {
   const sourceName = getNodeName(sourceGltf, sourceGltf.extensions?.VRMC_vrm_animation?.lookAt?.node)
   const lookAt = targetGltf.extensions?.VRMC_vrm?.lookAt
@@ -27,8 +35,8 @@ export function createVRMLookAtExpressionBindings(sourceGltf: VRMGltfJson, targe
 
   const rangeMaps = {
     down: getRangeMap(lookAt.rangeMapVerticalDown),
-    left: getRangeMap(lookAt.rangeMapHorizontalInner),
-    right: getRangeMap(lookAt.rangeMapHorizontalInner),
+    left: getRangeMap(lookAt.rangeMapHorizontalOuter),
+    right: getRangeMap(lookAt.rangeMapHorizontalOuter),
     up: getRangeMap(lookAt.rangeMapVerticalUp),
   }
   const bindings: VRMLookAtExpressionBinding[] = []
@@ -52,4 +60,51 @@ export function createVRMLookAtExpressionBindings(sourceGltf: VRMGltfJson, targe
   }
 
   return bindings
+}
+
+export function createVRMLookAtBoneBindings(sourceGltf: VRMGltfJson, targetGltf: VRMGltfJson): VRMLookAtBoneBinding[] {
+  const sourceName = getNodeName(sourceGltf, sourceGltf.extensions?.VRMC_vrm_animation?.lookAt?.node)
+  if (sourceName == null) return []
+
+  const restPose = getVRMHumanoidRestPose(targetGltf)
+  const leftEye = restPose.leftEye
+  const rightEye = restPose.rightEye
+  if (leftEye == null || rightEye == null) return []
+
+  const vrm1LookAt = targetGltf.extensions?.VRMC_vrm?.lookAt
+  const vrm0LookAt = targetGltf.extensions?.VRM?.firstPerson
+  const isVRM1BoneLookAt = vrm1LookAt?.type === 'bone'
+  const isVRM0BoneLookAt = vrm0LookAt?.lookAtTypeName === 'Bone'
+  if (!isVRM1BoneLookAt && !isVRM0BoneLookAt) return []
+
+  const ranges = isVRM1BoneLookAt
+    ? {
+        horizontalInner: getRangeMap(vrm1LookAt?.rangeMapHorizontalInner),
+        horizontalOuter: getRangeMap(vrm1LookAt?.rangeMapHorizontalOuter),
+        verticalDown: getRangeMap(vrm1LookAt?.rangeMapVerticalDown),
+        verticalUp: getRangeMap(vrm1LookAt?.rangeMapVerticalUp),
+      }
+    : {
+        horizontalInner: getVRM0RangeMap(vrm0LookAt?.lookAtHorizontalInner),
+        horizontalOuter: getVRM0RangeMap(vrm0LookAt?.lookAtHorizontalOuter),
+        verticalDown: getVRM0RangeMap(vrm0LookAt?.lookAtVerticalDown),
+        verticalUp: getVRM0RangeMap(vrm0LookAt?.lookAtVerticalUp),
+      }
+
+  return [
+    {
+      eye: 'left',
+      sourceName,
+      targetName: leftEye.name,
+      targetRestLocalRotation: leftEye.localRotation,
+      ...ranges,
+    },
+    {
+      eye: 'right',
+      sourceName,
+      targetName: rightEye.name,
+      targetRestLocalRotation: rightEye.localRotation,
+      ...ranges,
+    },
+  ]
 }
