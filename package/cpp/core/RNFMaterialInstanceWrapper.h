@@ -38,6 +38,7 @@ public: // Public API
   std::vector<double> getFloat3Parameter(std::string name);
   std::vector<double> getFloat4Parameter(std::string name);
   std::vector<double> getMat3fParameter(std::string name);
+  std::vector<std::string> getTextureTransformParameterNames();
   std::string getName();
 
 public: // Internal API

@@ -1,7 +1,7 @@
 import type { BufferSource } from '../hooks/useBuffer'
 import { getGltfAnimationClips } from './animation'
 import { getVRMCompatibilityReport } from './compatibility'
-import { createVRMExpressionBindings, createVRMExpressionMaterialColorBindings } from './expressions'
+import { createVRMExpressionBindings, createVRMExpressionMaterialColorBindings, createVRMExpressionTextureTransformBindings } from './expressions'
 import { loadGltfDocument, loadGltfJson } from './gltf'
 import { createVRMHumanoidBindings, getVRMAHumanoidRestPose, getVRMHumanoidRestPose } from './humanoid'
 import { createVRMLookAtBoneBindings, createVRMLookAtExpressionBindings } from './lookAt'
@@ -16,6 +16,7 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
     bindings: createVRMHumanoidBindings(getVRMAHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
     expressionBindings: createVRMExpressionBindings(vrmaDocument.json, vrmGltf),
     expressionMaterialColorBindings: createVRMExpressionMaterialColorBindings(vrmaDocument.json, vrmGltf),
+    expressionTextureTransformBindings: createVRMExpressionTextureTransformBindings(vrmaDocument.json, vrmGltf),
     lookAtBoneBindings: createVRMLookAtBoneBindings(vrmaDocument.json, vrmGltf),
     lookAtExpressionBindings: createVRMLookAtExpressionBindings(vrmaDocument.json, vrmGltf),
     nodeConstraintBindings: createVRMNodeConstraintBindings(vrmGltf),

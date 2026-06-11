@@ -18,5 +18,6 @@ export interface MaterialInstance {
   getMat3fParameter(name: string): Mat3f
   getFloat3Parameter(name: string): Float3
   getFloat4Parameter(name: string): Float4
+  getTextureTransformParameterNames(): string[]
   readonly name: string
 }

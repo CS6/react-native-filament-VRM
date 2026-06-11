@@ -1,5 +1,11 @@
-import type { Float4 } from '../types'
-import type { VRMExpressionBinding, VRMExpressionMaterialColorBindType, VRMExpressionMaterialColorBinding, VRMGltfJson } from './types'
+import type { Float4, Mat3f } from '../types'
+import type {
+  VRMExpressionBinding,
+  VRMExpressionMaterialColorBindType,
+  VRMExpressionMaterialColorBinding,
+  VRMExpressionTextureTransformBinding,
+  VRMGltfJson,
+} from './types'
 
 const VRM0_PRESET_NAME_MAP: Record<string, string> = {
   a: 'aa',
@@ -79,6 +85,10 @@ function getMaterialBaseColor(gltf: VRMGltfJson, materialIndex: number | undefin
   if (type === 'rimColor') return mtoon?.parametricRimColorFactor ?? [0, 0, 0, 1]
   if (type === 'outlineColor') return mtoon?.outlineColorFactor ?? [0, 0, 0, 1]
   return undefined
+}
+
+function createTextureTransformMatrix(offset: [number, number] | undefined, scale: [number, number] | undefined): Mat3f {
+  return [scale?.[0] ?? 1, 0, 0, 0, scale?.[1] ?? 1, 0, offset?.[0] ?? 0, offset?.[1] ?? 0, 1]
 }
 
 export function getVRMAExpressionNodeNames(gltf: VRMGltfJson): Record<string, string> {
@@ -175,6 +185,35 @@ export function createVRMExpressionMaterialColorBindings(sourceGltf: VRMGltfJson
           sourceName,
           targetName: target.targetName,
           targetValue: bind.targetValue,
+        })
+      }
+    }
+  }
+
+  return bindings
+}
+
+export function createVRMExpressionTextureTransformBindings(sourceGltf: VRMGltfJson, targetGltf: VRMGltfJson): VRMExpressionTextureTransformBinding[] {
+  const sourceNames = getVRMAExpressionNodeNames(sourceGltf)
+  const bindings: VRMExpressionTextureTransformBinding[] = []
+  const vrm1Expressions = targetGltf.extensions?.VRMC_vrm?.expressions
+
+  for (const [groupName, expression] of Object.entries({
+    ...(vrm1Expressions?.preset ?? {}),
+    ...(vrm1Expressions?.custom ?? {}),
+  })) {
+    const sourceName = sourceNames[groupName]
+    if (sourceName == null) continue
+
+    for (const bind of expression?.textureTransformBinds ?? []) {
+      for (const target of getMaterialPrimitiveTargets(targetGltf, bind.material)) {
+        bindings.push({
+          baseValue: createTextureTransformMatrix(undefined, undefined),
+          expressionName: groupName,
+          primitiveIndex: target.primitiveIndex,
+          sourceName,
+          targetName: target.targetName,
+          targetValue: createTextureTransformMatrix(bind.offset, bind.scale),
         })
       }
     }

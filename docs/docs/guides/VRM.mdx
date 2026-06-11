@@ -54,6 +54,7 @@ function Avatar() {
           bindings={animation.retargeting.bindings}
           expressionBindings={animation.retargeting.expressionBindings}
           expressionMaterialColorBindings={animation.retargeting.expressionMaterialColorBindings}
+          expressionTextureTransformBindings={animation.retargeting.expressionTextureTransformBindings}
           lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
@@ -96,6 +97,7 @@ function Avatar() {
           bindings={animation.retargeting.bindings}
           expressionBindings={animation.retargeting.expressionBindings}
           expressionMaterialColorBindings={animation.retargeting.expressionMaterialColorBindings}
+          expressionTextureTransformBindings={animation.retargeting.expressionTextureTransformBindings}
           lookAtBoneBindings={animation.retargeting.lookAtBoneBindings}
           lookAtExpressionBindings={animation.retargeting.lookAtExpressionBindings}
           nodeConstraintBindings={animation.retargeting.nodeConstraintBindings}
@@ -169,7 +171,9 @@ The retargeter applies morph target weights each frame through Filament's render
 
 `useVRMAnimation` also returns `expressionMaterialColorBindings` for VRM 1.0 `materialColorBinds`. The retargeter applies them with the VRM accumulation rule: start from the material's initial value, then add each expression's `(targetValue - baseValue) * weight` contribution for the same material parameter.
 
-Texture transform binds and expression override rules are not applied yet. Texture transforms need native sampler transform parameter discovery before they can be applied safely across glTFio and custom material packages.
+`useVRMAnimation` also returns `expressionTextureTransformBindings` for VRM 1.0 `textureTransformBinds`. The retargeter applies the accumulated transform to every sampler transform parameter exposed by the material instance, using Filament's native sampler transform metadata instead of guessing parameter names.
+
+Expression override rules are not applied yet.
 
 ## LookAt
 
@@ -203,4 +207,4 @@ Seed-san uses this for hair springs and the `RoboWire` chain behind the mechanic
 
 ## Known gaps
 
-The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression material color binds, VRM 1.0 expression-based LookAt, VRM 1.0/0.x bone-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for expression texture transform binds and expression override rules.
+The current retargeting path covers humanoid FK animation, hips translation, expression morph target weights, VRM 1.0 expression material color binds, VRM 1.0 expression texture transform binds, VRM 1.0 expression-based LookAt, VRM 1.0/0.x bone-based LookAt, `VRMC_node_constraint` rotation/aim/roll constraints, and core `VRMC_springBone` simulation. Full VRM extension support still requires separate handling for expression override rules.

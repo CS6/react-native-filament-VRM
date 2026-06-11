@@ -3,11 +3,12 @@ import { useSharedValue } from 'react-native-worklets-core'
 import { RenderCallbackContext } from '../react/RenderCallbackContext'
 import { useAnimator } from '../hooks/useAnimator'
 import { useFilamentContext } from '../hooks/useFilamentContext'
-import type { Entity, Float3, Float4 } from '../types'
+import type { Entity, Float3, Float4, Mat3f } from '../types'
 import type {
   VRMAnimationRetargeterProps,
   VRMExpressionRetargetBinding,
   VRMExpressionMaterialColorRetargetBinding,
+  VRMExpressionTextureTransformRetargetBinding,
   VRMLookAtBoneRetargetBinding,
   VRMLookAtExpressionRetargetBinding,
   VRMNodeConstraintRetargetBinding,
@@ -105,6 +106,21 @@ function scaleFloat4(vector: Float4, scale: number): Float4 {
   return [vector[0] * scale, vector[1] * scale, vector[2] * scale, vector[3] * scale]
 }
 
+function addMat3f(a: Mat3f, b: Mat3f): Mat3f {
+  'worklet'
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3], a[4] + b[4], a[5] + b[5], a[6] + b[6], a[7] + b[7], a[8] + b[8]]
+}
+
+function subMat3f(a: Mat3f, b: Mat3f): Mat3f {
+  'worklet'
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3], a[4] - b[4], a[5] - b[5], a[6] - b[6], a[7] - b[7], a[8] - b[8]]
+}
+
+function scaleMat3f(matrix: Mat3f, scale: number): Mat3f {
+  'worklet'
+  return [matrix[0] * scale, matrix[1] * scale, matrix[2] * scale, matrix[3] * scale, matrix[4] * scale, matrix[5] * scale, matrix[6] * scale, matrix[7] * scale, matrix[8] * scale]
+}
+
 function getLookAtAngles(rotation: [number, number, number, number]): { pitchDegrees: number; yawDegrees: number } {
   'worklet'
   const [x, y, z, w] = rotation
@@ -179,6 +195,7 @@ export function VRMAnimationRetargeter({
   bindings,
   expressionBindings = [],
   expressionMaterialColorBindings = [],
+  expressionTextureTransformBindings = [],
   lookAtBoneBindings = [],
   lookAtExpressionBindings = [],
   nodeConstraintBindings = [],
@@ -298,6 +315,27 @@ export function VRMAnimationRetargeter({
       ]
     })
   }, [expressionMaterialColorBindings, nameComponentManager, sourceAsset, targetModel])
+
+  const retargetExpressionTextureTransformBindings = React.useMemo<VRMExpressionTextureTransformRetargetBinding[]>(() => {
+    const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+    const targetEntities = getEntityMap(targetModel.asset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
+
+    return expressionTextureTransformBindings.flatMap(({ baseValue, primitiveIndex, sourceName, targetName, targetValue }) => {
+      const source = sourceEntities.get(sourceName)
+      const target = targetEntities.get(targetName)
+      if (source == null || target == null) return []
+
+      return [
+        {
+          baseValue,
+          primitiveIndex,
+          source,
+          target,
+          targetValue,
+        },
+      ]
+    })
+  }, [expressionTextureTransformBindings, nameComponentManager, sourceAsset, targetModel])
 
   const retargetLookAtBoneBindings = React.useMemo<VRMLookAtBoneRetargetBinding[]>(() => {
     const sourceEntities = getEntityMap(sourceAsset.getEntities(), (entity) => nameComponentManager.getEntityName(entity))
@@ -434,6 +472,7 @@ export function VRMAnimationRetargeter({
         (retargetBindings.length === 0 &&
           retargetExpressionBindings.length === 0 &&
           retargetExpressionMaterialColorBindings.length === 0 &&
+          retargetExpressionTextureTransformBindings.length === 0 &&
           retargetLookAtBoneBindings.length === 0 &&
           retargetLookAtExpressionBindings.length === 0 &&
           retargetNodeConstraintBindings.length === 0 &&
@@ -616,6 +655,37 @@ export function VRMAnimationRetargeter({
         materialInstance.setFloat4Parameter(binding.parameterName, value)
       }
 
+      for (let index = 0; index < retargetExpressionTextureTransformBindings.length; index++) {
+        const binding = retargetExpressionTextureTransformBindings[index]
+        if (binding == null) continue
+
+        let value = binding.baseValue
+        let alreadyApplied = false
+        for (let previousIndex = 0; previousIndex < index; previousIndex++) {
+          const previous = retargetExpressionTextureTransformBindings[previousIndex]
+          if (previous?.target === binding.target && previous.primitiveIndex === binding.primitiveIndex) {
+            alreadyApplied = true
+            break
+          }
+        }
+        if (alreadyApplied) continue
+
+        for (const candidate of retargetExpressionTextureTransformBindings) {
+          if (candidate.target !== binding.target || candidate.primitiveIndex !== binding.primitiveIndex) {
+            continue
+          }
+
+          const sourceTransform = transformManager.getTransform(candidate.source)
+          const weight = Math.max(0, Math.min(1, sourceTransform.translation[0]))
+          value = addMat3f(value, scaleMat3f(subMat3f(candidate.targetValue, candidate.baseValue), weight))
+        }
+
+        const materialInstance = renderableManager.getMaterialInstanceAt(binding.target, binding.primitiveIndex)
+        for (const parameterName of materialInstance.getTextureTransformParameterNames()) {
+          materialInstance.setMat3fParameter(parameterName, value)
+        }
+      }
+
       for (const binding of retargetLookAtExpressionBindings) {
         const sourceTransform = transformManager.getTransform(binding.source)
         const { pitchDegrees, yawDegrees } = getLookAtAngles(sourceTransform.rotationQuaternion)
@@ -643,6 +713,7 @@ export function VRMAnimationRetargeter({
       retargetBindings,
       retargetExpressionBindings,
       retargetExpressionMaterialColorBindings,
+      retargetExpressionTextureTransformBindings,
       retargetLookAtBoneBindings,
       retargetLookAtExpressionBindings,
       retargetNodeConstraintBindings,

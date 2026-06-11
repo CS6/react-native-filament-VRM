@@ -23,6 +23,7 @@ void MaterialInstanceWrapper::loadHybridMethods() {
   registerHybridMethod("getFloat3Parameter", &MaterialInstanceWrapper::getFloat3Parameter, this);
   registerHybridMethod("getFloat4Parameter", &MaterialInstanceWrapper::getFloat4Parameter, this);
   registerHybridMethod("getMat3fParameter", &MaterialInstanceWrapper::getMat3fParameter, this);
+  registerHybridMethod("getTextureTransformParameterNames", &MaterialInstanceWrapper::getTextureTransformParameterNames, this);
   registerHybridGetter("getName", &MaterialInstanceWrapper::getName, this);
 }
 
@@ -189,6 +190,27 @@ std::vector<double> MaterialInstanceWrapper::getMat3fParameter(std::string name)
   const float* matrixArray = matrix.asArray();
   return {matrixArray[0], matrixArray[1], matrixArray[2], matrixArray[3], matrixArray[4],
           matrixArray[5], matrixArray[6], matrixArray[7], matrixArray[8]};
+}
+
+std::vector<std::string> MaterialInstanceWrapper::getTextureTransformParameterNames() {
+  const Material* material = _materialInstance->getMaterial();
+  const size_t parameterCount = material->getParameterCount();
+  std::vector<Material::ParameterInfo> parameters(parameterCount);
+  material->getParameters(parameters.data(), parameterCount);
+
+  std::vector<std::string> transformParameterNames;
+  for (const auto& parameter : parameters) {
+    if (!parameter.isSampler) {
+      continue;
+    }
+
+    const char* transformName = material->getParameterTransformName(parameter.name);
+    if (transformName != nullptr && material->hasParameter(transformName)) {
+      transformParameterNames.emplace_back(transformName);
+    }
+  }
+
+  return transformParameterNames;
 }
 
 } // namespace margelo

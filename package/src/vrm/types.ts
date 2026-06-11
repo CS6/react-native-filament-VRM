@@ -1,6 +1,6 @@
 import type { BufferSource } from '../hooks/useBuffer'
 import type { FilamentModel } from '../hooks/useModel'
-import type { Entity, FilamentAsset, Float3, Float4 } from '../types'
+import type { Entity, FilamentAsset, Float3, Float4, Mat3f } from '../types'
 
 export type VRMHumanoidBoneName =
   | 'hips'
@@ -256,6 +256,15 @@ export interface VRMExpressionMaterialColorBinding {
   targetValue: Float4
 }
 
+export interface VRMExpressionTextureTransformBinding {
+  baseValue: Mat3f
+  expressionName: string
+  primitiveIndex: number
+  sourceName: string
+  targetName: string
+  targetValue: Mat3f
+}
+
 export interface VRMLookAtDefinition {
   offsetFromHeadBone?: Float3
   rangeMapHorizontalInner?: VRMLookAtRangeMap
@@ -496,6 +505,14 @@ export interface VRMExpressionMaterialColorRetargetBinding {
   targetValue: Float4
 }
 
+export interface VRMExpressionTextureTransformRetargetBinding {
+  baseValue: Mat3f
+  primitiveIndex: number
+  source: Entity
+  target: Entity
+  targetValue: Mat3f
+}
+
 export interface VRMLookAtExpressionRetargetBinding {
   source: Entity
   direction: 'left' | 'right' | 'up' | 'down'
@@ -573,6 +590,7 @@ export interface VRMAnimationRetargeterProps {
   bindings: VRMHumanoidBinding[]
   expressionBindings?: VRMExpressionBinding[]
   expressionMaterialColorBindings?: VRMExpressionMaterialColorBinding[]
+  expressionTextureTransformBindings?: VRMExpressionTextureTransformBinding[]
   lookAtBoneBindings?: VRMLookAtBoneBinding[]
   lookAtExpressionBindings?: VRMLookAtExpressionBinding[]
   nodeConstraintBindings?: VRMNodeConstraintBinding[]
@@ -586,6 +604,7 @@ export interface VRMAnimationRetargeting {
   bindings: VRMHumanoidBinding[]
   expressionBindings: VRMExpressionBinding[]
   expressionMaterialColorBindings: VRMExpressionMaterialColorBinding[]
+  expressionTextureTransformBindings: VRMExpressionTextureTransformBinding[]
   lookAtBoneBindings: VRMLookAtBoneBinding[]
   lookAtExpressionBindings: VRMLookAtExpressionBinding[]
   nodeConstraintBindings: VRMNodeConstraintBinding[]
