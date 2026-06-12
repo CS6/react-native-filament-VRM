@@ -1,11 +1,12 @@
 import * as React from 'react'
-import { Button, StyleSheet, Text, View } from 'react-native'
+import { Button, Dimensions, StyleSheet, Text, View } from 'react-native'
 import {
   Camera,
   DefaultLight,
   FilamentScene,
   FilamentView,
   ModelRenderer,
+  useCameraManipulator,
   useModel,
   useVRMAnimation,
   useVRMMaterialFallbackSource,
@@ -13,6 +14,8 @@ import {
 } from 'react-native-filament'
 import ReactNativeBlobUtil from 'react-native-blob-util'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { useSharedValue } from 'react-native-worklets-core'
 import AvatarSampleA from '@assets/AvatarSample_A.vrm'
 import ClappingVrma from '@assets/Clapping.vrma'
 import JumpVrma from '@assets/Jump.vrma'
@@ -90,14 +93,43 @@ function SceneContent({
   children?: React.ReactNode
   model: ReturnType<typeof useModel>
 }) {
+  const cameraManipulator = useCameraManipulator({
+    orbitHomePosition: [0, 0.25, -3],
+    targetPosition: [0, 0, 0],
+    orbitSpeed: [0.003, 0.003],
+  })
+  const viewHeight = Dimensions.get('window').height
+  const panGesture = Gesture.Pan()
+    .onBegin((event) => {
+      cameraManipulator?.grabBegin(event.translationX, viewHeight - event.translationY, false)
+    })
+    .onUpdate((event) => {
+      cameraManipulator?.grabUpdate(event.translationX, viewHeight - event.translationY)
+    })
+    .maxPointers(1)
+    .onEnd(() => {
+      cameraManipulator?.grabEnd()
+    })
+
+  const previousScale = useSharedValue(1)
+  const pinchGesture = Gesture.Pinch()
+    .onBegin(({ scale }) => {
+      previousScale.value = scale
+    })
+    .onUpdate(({ focalX, focalY, scale }) => {
+      cameraManipulator?.scroll(focalX, focalY, -(scale - previousScale.value) * 100)
+      previousScale.value = scale
+    })
+  const gesture = Gesture.Race(pinchGesture, panGesture)
+
   return (
-    <View style={styles.container}>
+    <GestureDetector gesture={gesture}>
       <FilamentView style={styles.filamentView}>
-        <Camera cameraPosition={[0, 0.25, -3]} cameraTarget={[0, 0, 0]} />
+        <Camera cameraManipulator={cameraManipulator} />
         <DefaultLight />
         {model.state === 'loaded' && <ModelRenderer model={model} transformToUnitCube>{children}</ModelRenderer>}
       </FilamentView>
-    </View>
+    </GestureDetector>
   )
 }
 
