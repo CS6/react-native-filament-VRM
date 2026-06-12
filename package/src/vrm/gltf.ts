@@ -6,15 +6,22 @@ const GLB_MAGIC = 0x46546c67
 const GLB_JSON_CHUNK_TYPE = 0x4e4f534a
 const GLB_BIN_CHUNK_TYPE = 0x004e4942
 
+function normalizeMetroAssetUri(uri: string): string {
+  const sharedAssetMatch = uri.match(/^(.*\/assets\/)\.\.\/Shared\/assets\/([^?]+)(\?.*)?$/)
+  if (sharedAssetMatch == null) return uri
+
+  return `${sharedAssetMatch[1]}${sharedAssetMatch[2]}${sharedAssetMatch[3] ?? ''}`
+}
+
 export function resolveBufferSourceUri(source: BufferSource): string {
-  if (typeof source === 'object') return source.uri
+  if (typeof source === 'object') return normalizeMetroAssetUri(source.uri)
 
   const asset = Image.resolveAssetSource(source)
   if (asset == null) {
     throw new Error(`Failed to resolve glTF source: ${source}`)
   }
 
-  return asset.uri
+  return normalizeMetroAssetUri(asset.uri)
 }
 
 function readUint32LE(bytes: Uint8Array, offset: number): number {
