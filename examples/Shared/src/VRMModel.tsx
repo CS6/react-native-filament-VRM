@@ -20,14 +20,38 @@ import LookAroundVrma from '@assets/LookAround.vrma'
 import RelaxVrma from '@assets/Relax.vrma'
 import SeedSan from '@assets/Seed-san.vrm'
 import TkVrmViewerSample from '@assets/TkVrmViewerSample.vrm'
+import VRM1ConstraintTwistSample from '@assets/VRM1_Constraint_Twist_Sample.vrm'
+import VRMCMaterialsMtoonUVAnimationTest from '@assets/VRMC_materials_mtoon_UV_Animation_Test.vrm'
+import VRMCVRMExpressionsIsBinaryOverridden from '@assets/VRMC_vrm_expressions_isBinary_Overridden.vrm'
+import VRMCVRMExpressionsIsBinaryOverrides from '@assets/VRMC_vrm_expressions_isBinary_Overrides.vrm'
 
-const AVATARS = [
+type VRMAvatarItem = {
+  label: string
+  source: number
+}
+
+type VRMMotionItem = {
+  label: string
+  source: number
+}
+
+const BASE_AVATARS: VRMAvatarItem[] = [{ label: 'Seed VRM1', source: SeedSan }]
+
+const CROSS_TEST_AVATARS: VRMAvatarItem[] = [
   { label: 'Avatar A', source: AvatarSampleA },
   { label: 'Seed VRM1', source: SeedSan },
   { label: 'TK VRM0', source: TkVrmViewerSample },
 ]
 
-const MOTIONS = [
+const OFFICIAL_SAMPLE_AVATARS: VRMAvatarItem[] = [
+  { label: 'Seed VRM1', source: SeedSan },
+  { label: 'Twist VRM1', source: VRM1ConstraintTwistSample },
+  { label: 'MToon UV', source: VRMCMaterialsMtoonUVAnimationTest },
+  { label: 'Binary Overridden', source: VRMCVRMExpressionsIsBinaryOverridden },
+  { label: 'Binary Overrides', source: VRMCVRMExpressionsIsBinaryOverrides },
+]
+
+const MOTIONS: VRMMotionItem[] = [
   { label: 'Jump', source: JumpVrma },
   { label: 'Relax', source: RelaxVrma },
   { label: 'Clap', source: ClappingVrma },
@@ -119,13 +143,21 @@ function Renderer({
   )
 }
 
-export function VRMModel() {
+function VRMTestPage({
+  avatars,
+  motions,
+  autoCycleAvatars,
+}: {
+  avatars: VRMAvatarItem[]
+  motions: VRMMotionItem[]
+  autoCycleAvatars: boolean
+}) {
   const [count, setCount] = React.useState(0)
   const [avatarIndex, setAvatarIndex] = React.useState(0)
   const [motionIndex, setMotionIndex] = React.useState(0)
   const [isAutoCycleEnabled, setIsAutoCycleEnabled] = React.useState(false)
-  const avatar = AVATARS[avatarIndex] ?? AVATARS[0]
-  const motion = MOTIONS[motionIndex] ?? MOTIONS[0]
+  const avatar = avatars[avatarIndex] ?? avatars[0]
+  const motion = motions[motionIndex] ?? motions[0]
   const writeFallbackGlb = React.useCallback(async (buffer: ArrayBuffer, fileName: string) => {
     const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${fileName}`
     await ReactNativeBlobUtil.fs.writeFile(path, toBase64(buffer), 'base64')
@@ -138,16 +170,16 @@ export function VRMModel() {
 
     const interval = setInterval(() => {
       setMotionIndex((currentMotionIndex) => {
-        const nextMotionIndex = (currentMotionIndex + 1) % MOTIONS.length
-        if (nextMotionIndex === 0) {
-          setAvatarIndex((currentAvatarIndex) => (currentAvatarIndex + 1) % AVATARS.length)
+        const nextMotionIndex = (currentMotionIndex + 1) % motions.length
+        if (autoCycleAvatars && nextMotionIndex === 0) {
+          setAvatarIndex((currentAvatarIndex) => (currentAvatarIndex + 1) % avatars.length)
         }
         return nextMotionIndex
       })
     }, AUTO_CYCLE_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [isAutoCycleEnabled])
+  }, [autoCycleAvatars, avatars.length, isAutoCycleEnabled, motions.length])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,12 +199,12 @@ export function VRMModel() {
         </Text>
       </View>
       <View style={styles.controls}>
-        {AVATARS.map((item, index) => (
+        {avatars.map((item, index) => (
           <Button key={item.label} title={item.label} onPress={() => setAvatarIndex(index)} />
         ))}
       </View>
       <View style={styles.controls}>
-        {MOTIONS.map((item, index) => (
+        {motions.map((item, index) => (
           <Button key={item.label} title={item.label} onPress={() => setMotionIndex(index)} />
         ))}
       </View>
@@ -182,6 +214,18 @@ export function VRMModel() {
       </View>
     </SafeAreaView>
   )
+}
+
+export function VRMModel() {
+  return <VRMTestPage avatars={BASE_AVATARS} motions={MOTIONS} autoCycleAvatars={false} />
+}
+
+export function VRMCrossTest() {
+  return <VRMTestPage avatars={CROSS_TEST_AVATARS} motions={MOTIONS} autoCycleAvatars />
+}
+
+export function VRMOfficialSamples() {
+  return <VRMTestPage avatars={OFFICIAL_SAMPLE_AVATARS} motions={MOTIONS} autoCycleAvatars />
 }
 
 const styles = StyleSheet.create({

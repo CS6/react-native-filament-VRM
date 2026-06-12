@@ -21,7 +21,7 @@ import { ChangeMaterials } from './ChangeMaterials'
 import { SkyboxExample } from './SkyboxExample'
 import { MorphTargets } from './MorphTargets'
 import { ReanimatedRotation } from './ReanimatedRotation'
-import { VRMModel } from './VRMModel'
+import { VRMCrossTest, VRMModel, VRMOfficialSamples } from './VRMModel'
 
 function NavigationItem(props: { name: string; route: string }) {
   const navigation = useNavigation()
@@ -70,6 +70,8 @@ function HomeScreen() {
       <NavigationItem name="☁️ Skybox" route="SkyboxExample" />
       <NavigationItem name="🔄 MorphTargets" route="MorphTargets" />
       <NavigationItem name="🧍 VRM Model" route="VRMModel" />
+      <NavigationItem name="🧍 VRM Cross Test" route="VRMCrossTest" />
+      <NavigationItem name="🧍 VRM Official Samples" route="VRMOfficialSamples" />
     </ScrollView>
   )
 }
@@ -115,6 +117,8 @@ function App() {
           <Stack.Screen name="SkyboxExample" component={SkyboxExample} />
           <Stack.Screen name="MorphTargets" component={MorphTargets} />
           <Stack.Screen name="VRMModel" component={VRMModel} />
+          <Stack.Screen name="VRMCrossTest" component={VRMCrossTest} />
+          <Stack.Screen name="VRMOfficialSamples" component={VRMOfficialSamples} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

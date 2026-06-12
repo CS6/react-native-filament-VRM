@@ -180,6 +180,14 @@ function convertVRM0HipsTranslationDelta([x, y, z]) {
 
 This conversion is intentionally target-version dependent. Applying it globally will make VRM 1.0 models such as Seed-san incorrect, while omitting it makes VRM 0.x models show mirrored or reversed upper-limb motion.
 
+## Example pages
+
+The example app keeps VRM checks split by page, following the rest of the sample project:
+
+- `VRMModel`: a focused Seed-san page for quick VRM 1.0 animation and runtime-extension checks.
+- `VRMCrossTest`: cross-tests multiple avatars against multiple external VRMA motions.
+- `VRMOfficialSamples`: runs the official `vrm-c/vrm-specification/samples` models against the same external VRMA motions so unsupported extensions and fallback behavior are visible in logs.
+
 ## Validation matrix
 
 Use more than one model and more than one motion when validating retargeting. A single model can hide a bad axis assumption because its rest pose may cancel out the error.
@@ -189,9 +197,15 @@ The current example uses:
 - `Seed-san.vrm`: VRM 1.0, expected to play VRMA without VRM0 axis conversion.
 - `AvatarSample_A.vrm`: VRM 0.x, expected to use VRM0 axis conversion.
 - `TkVrmViewerSample.vrm`: VRM 0.x sample from `tk256ailab/vrm-viewer`, expected to use VRM0 axis conversion.
+- `VRM1_Constraint_Twist_Sample.vrm`: official VRM 1.0 sample for constraint twist behavior, with 14 node constraints and 22 spring groups.
+- `VRMC_materials_mtoon_UV_Animation_Test.vrm`: official VRM 1.0 sample for MToon and material UV animation compatibility.
+- `VRMC_vrm_expressions_isBinary_Overridden.vrm`: official VRM 1.0 sample for expression `isBinary` and override behavior.
+- `VRMC_vrm_expressions_isBinary_Overrides.vrm`: official VRM 1.0 sample for expression `isBinary` and override behavior.
 - `Jump.vrma`, `Relax.vrma`, `Clapping.vrma`, and `LookAround.vrma`: VRMA motions from `tk256ailab/vrm-viewer`.
 
 The most useful visual checks are crossed arms, foot direction, hips translation, and asymmetric hand motion. These reveal x/z sign mistakes faster than idle or small head motions.
+
+The official VRM samples come from `vrm-c/vrm-specification/samples`. They do not include paired character motion files, so the example intentionally combines them with external VRMA motions to test retargeting and runtime extension behavior. Compatibility reports are logged for every selected model. Unsupported or fallback-only extensions are surfaced through `retargeting.compatibility.unsupportedExtensions`, `retargeting.compatibility.fallbackExtensions`, and `retargeting.compatibility.warnings`.
 
 ## Material fallback
 
