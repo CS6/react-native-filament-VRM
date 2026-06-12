@@ -23,16 +23,26 @@ module.exports = {
 
 ## Retargeting model
 
-VRMA animation targets humanoid bones, not the destination model's raw node names. The loader reads both files, creates a humanoid binding table, and applies animation to the target model's matching humanoid bones.
+Retargeted animation targets humanoid bones, not the destination model's raw node names. The loader reads both files, creates a humanoid binding table, and applies animation to the target model's matching humanoid bones.
+
+The animation source can be:
+
+- `.vrma` with `extensions.VRMC_vrm_animation.humanoid.humanBones`.
+- `.vrm`, `.glb`, or `.gltf` with VRM 1.0 `extensions.VRMC_vrm.humanoid.humanBones`.
+- `.vrm`, `.glb`, or `.gltf` with VRM 0.x `extensions.VRM.humanoid.humanBones`.
+
+Plain glTF animation files without humanoid metadata can still be played directly with `<Animator />` when the animation is embedded in the same loaded asset, but they cannot be retargeted safely to another VRM without an explicit bone mapping profile.
+
+The metadata loader accepts both binary `.glb`/`.vrm`/`.vrma` files and JSON `.gltf` files. For JSON `.gltf` animation sources, the animation asset still needs to be loadable by the native Filament asset loader at runtime; metadata parsing alone does not resolve arbitrary external buffers or textures.
 
 The retargeting path uses these inputs:
 
-- VRMA humanoid rest pose from `extensions.VRMC_vrm_animation.humanoid.humanBones`.
+- Animation-source humanoid rest pose from `extensions.VRMC_vrm_animation.humanoid.humanBones`, `extensions.VRMC_vrm.humanoid.humanBones`, or `extensions.VRM.humanoid.humanBones`.
 - VRM 1.0 humanoid rest pose from `extensions.VRMC_vrm.humanoid.humanBones`.
 - VRM 0.x humanoid rest pose from `extensions.VRM.humanoid.humanBones`.
 - Source and target local/world rest rotations for each bound humanoid bone.
 
-Use `useVRMAnimation` to load the metadata required by `VRMAnimationRetargeter`. The hook also loads the VRMA file as a hidden Filament asset because the native animator samples its glTF animation tracks each frame.
+Use `useVRMAnimation` to load the metadata required by `VRMAnimationRetargeter`. The hook also loads the animation source as a hidden Filament asset because the native animator samples its glTF animation tracks each frame. The returned `retargeting.source` report identifies whether the source metadata came from `VRMC_vrm_animation`, VRM 1.0, VRM 0.x, or could not be identified.
 
 ```tsx
 import { ModelRenderer, VRMAnimationRetargeter, useModel, useVRMAnimation } from 'react-native-filament'

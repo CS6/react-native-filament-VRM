@@ -37,6 +37,15 @@ export function parseGlbJson(buffer: ArrayBuffer): VRMGltfJson {
   return parseGlbDocument(buffer).json
 }
 
+export function parseGltfJson(buffer: ArrayBuffer): VRMGltfJson {
+  const bytes = new Uint8Array(buffer)
+  if (bytes.length >= 4 && readUint32LE(bytes, 0) === GLB_MAGIC) {
+    return parseGlbJson(buffer)
+  }
+
+  return JSON.parse(decodeUtf8(bytes).trim()) as VRMGltfJson
+}
+
 export function parseGlbDocument(buffer: ArrayBuffer): VRMGltfDocument {
   const bytes = new Uint8Array(buffer)
   if (bytes.length < 20 || readUint32LE(bytes, 0) !== GLB_MAGIC) {
@@ -77,6 +86,17 @@ export function parseGlbDocument(buffer: ArrayBuffer): VRMGltfDocument {
   return { json, binaryChunk }
 }
 
+export function parseGltfDocument(buffer: ArrayBuffer): VRMGltfDocument {
+  const bytes = new Uint8Array(buffer)
+  if (bytes.length >= 4 && readUint32LE(bytes, 0) === GLB_MAGIC) {
+    return parseGlbDocument(buffer)
+  }
+
+  return {
+    json: JSON.parse(decodeUtf8(bytes).trim()) as VRMGltfJson,
+  }
+}
+
 export async function loadGltfJson(source: BufferSource): Promise<VRMGltfJson> {
   return (await loadGltfDocument(source)).json
 }
@@ -85,9 +105,9 @@ export async function loadGltfDocument(source: BufferSource): Promise<VRMGltfDoc
   const uri = resolveBufferSourceUri(source)
   const response = await fetch(uri)
   if (!response.ok) {
-    throw new Error(`Failed to load glTF JSON from ${uri}: ${response.status}`)
+    throw new Error(`Failed to load glTF from ${uri}: ${response.status}`)
   }
 
   const buffer = await response.arrayBuffer()
-  return parseGlbDocument(buffer)
+  return parseGltfDocument(buffer)
 }

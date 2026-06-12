@@ -8,7 +8,7 @@ import {
   createVRMExpressionTextureTransformBindings,
 } from './expressions'
 import { loadGltfDocument, loadGltfJson } from './gltf'
-import { createVRMHumanoidBindings, getVRMAHumanoidRestPose, getVRMHumanoidRestPose } from './humanoid'
+import { createVRMHumanoidBindings, getVRMAnimationSourceHumanoidRestPose, getVRMAnimationSourceReport, getVRMHumanoidRestPose } from './humanoid'
 import { createVRMLookAtBoneBindings, createVRMLookAtExpressionBindings } from './lookAt'
 import { createVRMNodeConstraintBindings } from './nodeConstraints'
 import { createVRMSpringBoneBindings } from './springBone'
@@ -18,7 +18,7 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
   const compatibility = getVRMCompatibilityReport(vrmGltf)
 
   return {
-    bindings: createVRMHumanoidBindings(getVRMAHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
+    bindings: createVRMHumanoidBindings(getVRMAnimationSourceHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
     expressionBindings: createVRMExpressionBindings(vrmaDocument.json, vrmGltf),
     expressionMaterialColorBindings: createVRMExpressionMaterialColorBindings(vrmaDocument.json, vrmGltf),
     expressionTextureTransformBindings: createVRMExpressionTextureTransformBindings(vrmaDocument.json, vrmGltf),
@@ -29,6 +29,7 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
     springBoneBindings: createVRMSpringBoneBindings(vrmGltf),
     clips: getGltfAnimationClips(vrmaDocument),
     compatibility,
+    source: getVRMAnimationSourceReport(vrmaDocument.json),
     targetVersion: compatibility.version,
   }
 }

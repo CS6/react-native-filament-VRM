@@ -1,6 +1,7 @@
 import type { Float4 } from '../types'
 import { multiplyQuat, normalizeQuat } from './retargeting'
 import type {
+  VRMAnimationSourceReport,
   VRMGltfJson,
   VRMHumanoidBinding,
   VRMHumanoidBoneName,
@@ -227,6 +228,41 @@ export function getVRMAHumanoidRestPose(gltf: VRMGltfJson): VRMHumanoidRestPose 
     }
   }
   return restPose
+}
+
+export function getVRMAnimationSourceHumanoidRestPose(gltf: VRMGltfJson): VRMHumanoidRestPose {
+  const vrmaRestPose = getVRMAHumanoidRestPose(gltf)
+  if (Object.keys(vrmaRestPose).length > 0) return vrmaRestPose
+
+  return getVRMHumanoidRestPose(gltf)
+}
+
+export function getVRMAnimationSourceReport(gltf: VRMGltfJson): VRMAnimationSourceReport {
+  if (gltf.extensions?.VRMC_vrm_animation?.humanoid?.humanBones != null) {
+    return {
+      type: 'VRMC_vrm_animation',
+      humanoidBoneCount: Object.keys(getVRMAHumanoidRestPose(gltf)).length,
+    }
+  }
+
+  if (gltf.extensions?.VRMC_vrm?.humanoid?.humanBones != null) {
+    return {
+      type: 'VRM1',
+      humanoidBoneCount: Object.keys(getVRMHumanoidRestPose(gltf)).length,
+    }
+  }
+
+  if (gltf.extensions?.VRM?.humanoid?.humanBones != null) {
+    return {
+      type: 'VRM0',
+      humanoidBoneCount: Object.keys(getVRMHumanoidRestPose(gltf)).length,
+    }
+  }
+
+  return {
+    type: 'unknown',
+    humanoidBoneCount: 0,
+  }
 }
 
 export function getVRMHumanoidNodeNames(gltf: VRMGltfJson): VRMHumanoidNodeNames {
