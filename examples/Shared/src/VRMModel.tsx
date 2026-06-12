@@ -216,7 +216,15 @@ function VRMTestPage({
   return (
     <SafeAreaView style={styles.container}>
       <FilamentScene key={count}>
-        {mode === 'retarget' ? (
+        {modelFallback.isLoading ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusText}>Loading {avatar.label}</Text>
+          </View>
+        ) : modelFallback.error != null ? (
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusText}>{modelFallback.error.message}</Text>
+          </View>
+        ) : mode === 'retarget' ? (
           <RetargetRenderer
             key={`${avatar.source}-${motion.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
             animationLabel={motion.label}
@@ -289,5 +297,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  statusContainer: {
+    alignItems: 'center',
+    backgroundColor: '#101820',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  statusText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
   },
 })
