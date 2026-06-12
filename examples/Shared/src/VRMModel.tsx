@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useNavigation } from '@react-navigation/native'
 import { Button, StyleSheet, Text, View } from 'react-native'
 import {
   Camera,
@@ -152,6 +153,7 @@ function VRMTestPage({
   motions: VRMMotionItem[]
   autoCycleAvatars: boolean
 }) {
+  const navigation = useNavigation()
   const [count, setCount] = React.useState(0)
   const [avatarIndex, setAvatarIndex] = React.useState(0)
   const [motionIndex, setMotionIndex] = React.useState(0)
@@ -211,6 +213,11 @@ function VRMTestPage({
       <View style={styles.controls}>
         <Button title={isAutoCycleEnabled ? 'Stop Auto' : 'Auto'} onPress={() => setIsAutoCycleEnabled((value) => !value)} />
         <Button title="Rerender" onPress={() => setCount((c) => c + 1)} />
+      </View>
+      <View style={styles.controls}>
+        <Button title="Home" onPress={() => navigation.navigate('Home' as never)} />
+        <Button title="Cross Test" onPress={() => navigation.navigate('VRMCrossTest' as never)} />
+        <Button title="Official" onPress={() => navigation.navigate('VRMOfficialSamples' as never)} />
       </View>
     </SafeAreaView>
   )
