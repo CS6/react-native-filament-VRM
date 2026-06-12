@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { Button, StyleSheet, Text, View } from 'react-native'
 import {
+  Animator,
   Camera,
   DefaultLight,
   FilamentScene,
@@ -36,12 +37,15 @@ type VRMMotionItem = {
   source: number
 }
 
+type VRMPageMode = 'retarget' | 'static'
+
 const BASE_AVATARS: VRMAvatarItem[] = [{ label: 'Seed VRM1', source: SeedSan }]
 
 const CROSS_TEST_AVATARS: VRMAvatarItem[] = [
   { label: 'Avatar A', source: AvatarSampleA },
   { label: 'Seed VRM1', source: SeedSan },
   { label: 'TK VRM0', source: TkVrmViewerSample },
+  { label: 'Twist VRM1', source: VRM1ConstraintTwistSample },
 ]
 
 const OFFICIAL_SAMPLE_AVATARS: VRMAvatarItem[] = [
@@ -84,20 +88,25 @@ function toBase64(buffer: ArrayBuffer): string {
 function Renderer({
   animationLabel,
   animationSource,
+  mode,
   modelLabel,
   modelMetadataSource,
   modelSource,
 }: {
   animationLabel: string
   animationSource: number
+  mode: VRMPageMode
   modelLabel: string
   modelMetadataSource: number
   modelSource: number | { uri: string }
 }) {
   const vrmModel = useModel(modelSource)
   const vrmAnimation = useVRMAnimation(animationSource, modelMetadataSource)
+  const shouldRetarget = mode === 'retarget'
 
   React.useEffect(() => {
+    if (!shouldRetarget) return
+
     const retargeting = vrmAnimation.retargeting
     if (retargeting == null) {
       if (vrmAnimation.error != null) {
@@ -115,15 +124,19 @@ function Renderer({
     for (const warning of retargeting.compatibility.warnings) {
       console.log(`VRM compatibility warning ${modelLabel}: ${warning}`)
     }
-  }, [animationLabel, modelLabel, vrmAnimation.error, vrmAnimation.retargeting])
+  }, [animationLabel, modelLabel, shouldRetarget, vrmAnimation.error, vrmAnimation.retargeting])
 
   return (
     <View style={styles.container}>
       <FilamentView style={styles.filamentView}>
         <Camera cameraPosition={[0, 0.25, -3]} cameraTarget={[0, 0, 0]} />
         <DefaultLight />
-        {vrmModel.state === 'loaded' && <ModelRenderer model={vrmModel} transformToUnitCube />}
-        {vrmModel.state === 'loaded' && vrmAnimation.sourceAsset != null && vrmAnimation.retargeting != null && (
+        {vrmModel.state === 'loaded' && (
+          <ModelRenderer model={vrmModel} transformToUnitCube>
+            {!shouldRetarget && <Animator />}
+          </ModelRenderer>
+        )}
+        {shouldRetarget && vrmModel.state === 'loaded' && vrmAnimation.sourceAsset != null && vrmAnimation.retargeting != null && (
           <VRMAnimationRetargeter
             sourceAsset={vrmAnimation.sourceAsset}
             targetModel={vrmModel}
@@ -146,10 +159,12 @@ function Renderer({
 
 function VRMTestPage({
   avatars,
+  mode,
   motions,
   autoCycleAvatars,
 }: {
   avatars: VRMAvatarItem[]
+  mode: VRMPageMode
   motions: VRMMotionItem[]
   autoCycleAvatars: boolean
 }) {
@@ -190,6 +205,7 @@ function VRMTestPage({
           key={`${avatar.source}-${motion.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
           animationLabel={motion.label}
           animationSource={motion.source}
+          mode={mode}
           modelLabel={avatar.label}
           modelMetadataSource={avatar.source}
           modelSource={modelFallback.source}
@@ -206,9 +222,8 @@ function VRMTestPage({
         ))}
       </View>
       <View style={styles.controls}>
-        {motions.map((item, index) => (
-          <Button key={item.label} title={item.label} onPress={() => setMotionIndex(index)} />
-        ))}
+        {mode === 'retarget' &&
+          motions.map((item, index) => <Button key={item.label} title={item.label} onPress={() => setMotionIndex(index)} />)}
       </View>
       <View style={styles.controls}>
         <Button title={isAutoCycleEnabled ? 'Stop Auto' : 'Auto'} onPress={() => setIsAutoCycleEnabled((value) => !value)} />
@@ -224,15 +239,15 @@ function VRMTestPage({
 }
 
 export function VRMModel() {
-  return <VRMTestPage avatars={BASE_AVATARS} motions={MOTIONS} autoCycleAvatars={false} />
+  return <VRMTestPage avatars={BASE_AVATARS} mode="retarget" motions={MOTIONS} autoCycleAvatars={false} />
 }
 
 export function VRMCrossTest() {
-  return <VRMTestPage avatars={CROSS_TEST_AVATARS} motions={MOTIONS} autoCycleAvatars />
+  return <VRMTestPage avatars={CROSS_TEST_AVATARS} mode="retarget" motions={MOTIONS} autoCycleAvatars />
 }
 
 export function VRMOfficialSamples() {
-  return <VRMTestPage avatars={OFFICIAL_SAMPLE_AVATARS} motions={MOTIONS} autoCycleAvatars />
+  return <VRMTestPage avatars={OFFICIAL_SAMPLE_AVATARS} mode="static" motions={MOTIONS} autoCycleAvatars />
 }
 
 const styles = StyleSheet.create({

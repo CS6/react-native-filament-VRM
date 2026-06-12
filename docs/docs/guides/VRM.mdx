@@ -186,7 +186,7 @@ The example app keeps VRM checks split by page, following the rest of the sample
 
 - `VRMModel`: a focused Seed-san page for quick VRM 1.0 animation and runtime-extension checks.
 - `VRMCrossTest`: cross-tests multiple avatars against multiple external VRMA motions.
-- `VRMOfficialSamples`: runs the official `vrm-c/vrm-specification/samples` models against the same external VRMA motions so unsupported extensions and fallback behavior are visible in logs.
+- `VRMOfficialSamples`: loads the official `vrm-c/vrm-specification/samples` models as compatibility fixtures. This page does not force external VRMA retargeting because some official samples are material or expression validation panels, not skinned dance avatars.
 
 ## Validation matrix
 
@@ -205,7 +205,7 @@ The current example uses:
 
 The most useful visual checks are crossed arms, foot direction, hips translation, and asymmetric hand motion. These reveal x/z sign mistakes faster than idle or small head motions.
 
-The official VRM samples come from `vrm-c/vrm-specification/samples`. They do not include paired character motion files, so the example intentionally combines them with external VRMA motions to test retargeting and runtime extension behavior. Compatibility reports are logged for every selected model. Unsupported or fallback-only extensions are surfaced through `retargeting.compatibility.unsupportedExtensions`, `retargeting.compatibility.fallbackExtensions`, and `retargeting.compatibility.warnings`.
+The official VRM samples come from `vrm-c/vrm-specification/samples`. They do not include paired character motion files. `Seed-san` and `VRM1_Constraint_Twist_Sample` are useful for motion retargeting checks; `VRMC_materials_mtoon_UV_Animation_Test` and the expression `isBinary` samples are validation panels, so they should be inspected as static or self-animated compatibility fixtures instead of forced through a dance motion.
 
 ## Material fallback
 
