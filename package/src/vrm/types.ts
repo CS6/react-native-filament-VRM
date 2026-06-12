@@ -468,11 +468,15 @@ export interface VRMGltfAnimationChannel {
 
 export type VRMVersion = '0.x' | '1.0' | 'unknown'
 
-export type VRMAnimationSourceType = 'VRMC_vrm_animation' | 'VRM1' | 'VRM0' | 'unknown'
+export type VRMAnimationSourceType = 'VRMC_vrm_animation' | 'VRM1' | 'VRM0' | 'custom' | 'unknown'
 
 export interface VRMAnimationSourceReport {
   type: VRMAnimationSourceType
   humanoidBoneCount: number
+}
+
+export interface VRMAnimationRetargetingOptions {
+  sourceHumanoidNodeNames?: VRMHumanoidNodeNames
 }
 
 export interface VRMCompatibilityReport {

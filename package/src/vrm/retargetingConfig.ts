@@ -12,13 +12,20 @@ import { createVRMHumanoidBindings, getVRMAnimationSourceHumanoidRestPose, getVR
 import { createVRMLookAtBoneBindings, createVRMLookAtExpressionBindings } from './lookAt'
 import { createVRMNodeConstraintBindings } from './nodeConstraints'
 import { createVRMSpringBoneBindings } from './springBone'
-import type { VRMAnimationRetargeting, VRMGltfDocument, VRMGltfJson } from './types'
+import type { VRMAnimationRetargeting, VRMAnimationRetargetingOptions, VRMGltfDocument, VRMGltfJson } from './types'
 
-export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrmGltf: VRMGltfJson): VRMAnimationRetargeting {
+export function createVRMAnimationRetargeting(
+  vrmaDocument: VRMGltfDocument,
+  vrmGltf: VRMGltfJson,
+  options: VRMAnimationRetargetingOptions = {}
+): VRMAnimationRetargeting {
   const compatibility = getVRMCompatibilityReport(vrmGltf)
 
   return {
-    bindings: createVRMHumanoidBindings(getVRMAnimationSourceHumanoidRestPose(vrmaDocument.json), getVRMHumanoidRestPose(vrmGltf)),
+    bindings: createVRMHumanoidBindings(
+      getVRMAnimationSourceHumanoidRestPose(vrmaDocument.json, options.sourceHumanoidNodeNames),
+      getVRMHumanoidRestPose(vrmGltf)
+    ),
     expressionBindings: createVRMExpressionBindings(vrmaDocument.json, vrmGltf),
     expressionMaterialColorBindings: createVRMExpressionMaterialColorBindings(vrmaDocument.json, vrmGltf),
     expressionTextureTransformBindings: createVRMExpressionTextureTransformBindings(vrmaDocument.json, vrmGltf),
@@ -29,12 +36,16 @@ export function createVRMAnimationRetargeting(vrmaDocument: VRMGltfDocument, vrm
     springBoneBindings: createVRMSpringBoneBindings(vrmGltf),
     clips: getGltfAnimationClips(vrmaDocument),
     compatibility,
-    source: getVRMAnimationSourceReport(vrmaDocument.json),
+    source: getVRMAnimationSourceReport(vrmaDocument.json, options.sourceHumanoidNodeNames),
     targetVersion: compatibility.version,
   }
 }
 
-export async function loadVRMAnimationRetargeting(vrmaSource: BufferSource, vrmSource: BufferSource): Promise<VRMAnimationRetargeting> {
+export async function loadVRMAnimationRetargeting(
+  vrmaSource: BufferSource,
+  vrmSource: BufferSource,
+  options: VRMAnimationRetargetingOptions = {}
+): Promise<VRMAnimationRetargeting> {
   const [vrmaDocument, vrmGltf] = await Promise.all([loadGltfDocument(vrmaSource), loadGltfJson(vrmSource)])
-  return createVRMAnimationRetargeting(vrmaDocument, vrmGltf)
+  return createVRMAnimationRetargeting(vrmaDocument, vrmGltf, options)
 }

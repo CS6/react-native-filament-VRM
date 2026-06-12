@@ -30,8 +30,9 @@ The animation source can be:
 - `.vrma` with `extensions.VRMC_vrm_animation.humanoid.humanBones`.
 - `.vrm`, `.glb`, or `.gltf` with VRM 1.0 `extensions.VRMC_vrm.humanoid.humanBones`.
 - `.vrm`, `.glb`, or `.gltf` with VRM 0.x `extensions.VRM.humanoid.humanBones`.
+- `.glb` or `.gltf` with an explicit `sourceHumanoidNodeNames` mapping passed to `useVRMAnimation`.
 
-Plain glTF animation files without humanoid metadata can still be played directly with `<Animator />` when the animation is embedded in the same loaded asset, but they cannot be retargeted safely to another VRM without an explicit bone mapping profile.
+Plain glTF animation files without humanoid metadata can still be played directly with `<Animator />` when the animation is embedded in the same loaded asset. To retarget them to another VRM, pass an explicit bone mapping profile so the loader can build a source humanoid rest pose without guessing.
 
 The metadata loader accepts both binary `.glb`/`.vrm`/`.vrma` files and JSON `.gltf` files. For JSON `.gltf` animation sources, the animation asset still needs to be loadable by the native Filament asset loader at runtime; metadata parsing alone does not resolve arbitrary external buffers or textures.
 
@@ -79,6 +80,35 @@ function Avatar() {
 ```
 
 `targetVersion` is part of the retargeting result because VRM 0.x targets need a different axis conversion from VRM 1.0 targets.
+
+For ordinary glTF animation sources without VRM metadata, provide a stable `sourceHumanoidNodeNames` mapping. This is the intended path for BVH-to-glTF or third-party motion pipelines where the source skeleton names are known:
+
+```tsx
+const sourceHumanoidNodeNames = React.useMemo(
+  () => ({
+    hips: 'Hips',
+    spine: 'Spine',
+    chest: 'Spine1',
+    neck: 'Neck',
+    head: 'Head',
+    leftUpperArm: 'LeftArm',
+    leftLowerArm: 'LeftForeArm',
+    leftHand: 'LeftHand',
+    rightUpperArm: 'RightArm',
+    rightLowerArm: 'RightForeArm',
+    rightHand: 'RightHand',
+    leftUpperLeg: 'LeftUpLeg',
+    leftLowerLeg: 'LeftLeg',
+    leftFoot: 'LeftFoot',
+    rightUpperLeg: 'RightUpLeg',
+    rightLowerLeg: 'RightLeg',
+    rightFoot: 'RightFoot',
+  }),
+  []
+)
+
+const animation = useVRMAnimation(glbMotionSource, vrmSource, { sourceHumanoidNodeNames })
+```
 
 If the VRM needs material fallback, render the patched fallback source but keep using the original VRM source for animation metadata:
 

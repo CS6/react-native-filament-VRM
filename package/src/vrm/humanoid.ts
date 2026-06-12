@@ -183,6 +183,31 @@ function createRestNode(gltf: VRMGltfJson, nodeIndex: number | undefined, worldR
   }
 }
 
+function getNodeIndexByName(gltf: VRMGltfJson): Map<string, number> {
+  const nodeIndices = new Map<string, number>()
+  for (const [nodeIndex, node] of (gltf.nodes ?? []).entries()) {
+    if (node.name != null) nodeIndices.set(node.name, nodeIndex)
+  }
+  return nodeIndices
+}
+
+export function getVRMHumanoidRestPoseFromNodeNames(gltf: VRMGltfJson, nodeNames: VRMHumanoidNodeNames): VRMHumanoidRestPose {
+  const worldRotations = getWorldRotations(gltf)
+  const nodeIndices = getNodeIndexByName(gltf)
+  const restPose: VRMHumanoidRestPose = {}
+
+  for (const bone of VRM_HUMANOID_BONES) {
+    const nodeName = nodeNames[bone]
+    const nodeIndex = nodeName == null ? undefined : nodeIndices.get(nodeName)
+    const restNode = createRestNode(gltf, nodeIndex, worldRotations)
+    if (restNode != null) {
+      restPose[bone] = restNode
+    }
+  }
+
+  return restPose
+}
+
 export function getVRMHumanoidRestPose(gltf: VRMGltfJson): VRMHumanoidRestPose {
   const worldRotations = getWorldRotations(gltf)
   const vrm0Bones = gltf.extensions?.VRM?.humanoid?.humanBones
@@ -230,14 +255,25 @@ export function getVRMAHumanoidRestPose(gltf: VRMGltfJson): VRMHumanoidRestPose 
   return restPose
 }
 
-export function getVRMAnimationSourceHumanoidRestPose(gltf: VRMGltfJson): VRMHumanoidRestPose {
+export function getVRMAnimationSourceHumanoidRestPose(gltf: VRMGltfJson, sourceHumanoidNodeNames?: VRMHumanoidNodeNames): VRMHumanoidRestPose {
+  if (sourceHumanoidNodeNames != null) {
+    return getVRMHumanoidRestPoseFromNodeNames(gltf, sourceHumanoidNodeNames)
+  }
+
   const vrmaRestPose = getVRMAHumanoidRestPose(gltf)
   if (Object.keys(vrmaRestPose).length > 0) return vrmaRestPose
 
   return getVRMHumanoidRestPose(gltf)
 }
 
-export function getVRMAnimationSourceReport(gltf: VRMGltfJson): VRMAnimationSourceReport {
+export function getVRMAnimationSourceReport(gltf: VRMGltfJson, sourceHumanoidNodeNames?: VRMHumanoidNodeNames): VRMAnimationSourceReport {
+  if (sourceHumanoidNodeNames != null) {
+    return {
+      type: 'custom',
+      humanoidBoneCount: Object.keys(getVRMHumanoidRestPoseFromNodeNames(gltf, sourceHumanoidNodeNames)).length,
+    }
+  }
+
   if (gltf.extensions?.VRMC_vrm_animation?.humanoid?.humanBones != null) {
     return {
       type: 'VRMC_vrm_animation',

@@ -3,9 +3,11 @@ import { useBuffer, type BufferSource } from '../hooks/useBuffer'
 import { useDisposableResource } from '../hooks/useDisposableResource'
 import { useFilamentContext } from '../hooks/useFilamentContext'
 import { loadVRMAnimationRetargeting } from './retargetingConfig'
-import type { VRMAnimationRetargeting, VRMAnimationState } from './types'
+import type { VRMAnimationRetargeting, VRMAnimationRetargetingOptions, VRMAnimationState } from './types'
 
-export function useVRMAnimation(vrmaSource: BufferSource, vrmSource: BufferSource): VRMAnimationState {
+const DEFAULT_RETARGETING_OPTIONS: VRMAnimationRetargetingOptions = {}
+
+export function useVRMAnimation(vrmaSource: BufferSource, vrmSource: BufferSource, options: VRMAnimationRetargetingOptions = DEFAULT_RETARGETING_OPTIONS): VRMAnimationState {
   const { engine, workletContext } = useFilamentContext()
   const assetBuffer = useBuffer({ source: vrmaSource, releaseOnUnmount: false })
   const [retargeting, setRetargeting] = useState<VRMAnimationRetargeting>()
@@ -27,7 +29,7 @@ export function useVRMAnimation(vrmaSource: BufferSource, vrmSource: BufferSourc
     setRetargeting(undefined)
     setError(undefined)
 
-    loadVRMAnimationRetargeting(vrmaSource, vrmSource)
+    loadVRMAnimationRetargeting(vrmaSource, vrmSource, options)
       .then((nextRetargeting) => {
         if (isMounted) {
           setRetargeting(nextRetargeting)
@@ -42,7 +44,7 @@ export function useVRMAnimation(vrmaSource: BufferSource, vrmSource: BufferSourc
     return () => {
       isMounted = false
     }
-  }, [vrmaSource, vrmSource])
+  }, [options, vrmaSource, vrmSource])
 
   return {
     sourceAsset,
