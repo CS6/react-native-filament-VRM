@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { Button, StyleSheet, Text, View } from 'react-native'
 import {
-  Animator,
   Camera,
   DefaultLight,
   FilamentScene,
@@ -84,28 +83,50 @@ function toBase64(buffer: ArrayBuffer): string {
   return output
 }
 
-function Renderer({
+function SceneContent({
+  children,
+  model,
+}: {
+  children?: React.ReactNode
+  model: ReturnType<typeof useModel>
+}) {
+  return (
+    <View style={styles.container}>
+      <FilamentView style={styles.filamentView}>
+        <Camera cameraPosition={[0, 0.25, -3]} cameraTarget={[0, 0, 0]} />
+        <DefaultLight />
+        {model.state === 'loaded' && <ModelRenderer model={model} transformToUnitCube>{children}</ModelRenderer>}
+      </FilamentView>
+    </View>
+  )
+}
+
+function StaticRenderer({
+  modelSource,
+}: {
+  modelSource: number | { uri: string }
+}) {
+  const vrmModel = useModel(modelSource)
+  return <SceneContent model={vrmModel} />
+}
+
+function RetargetRenderer({
   animationLabel,
   animationSource,
-  mode,
   modelLabel,
   modelMetadataSource,
   modelSource,
 }: {
   animationLabel: string
   animationSource: number
-  mode: VRMPageMode
   modelLabel: string
   modelMetadataSource: number
   modelSource: number | { uri: string }
 }) {
   const vrmModel = useModel(modelSource)
   const vrmAnimation = useVRMAnimation(animationSource, modelMetadataSource)
-  const shouldRetarget = mode === 'retarget'
 
   React.useEffect(() => {
-    if (!shouldRetarget) return
-
     const retargeting = vrmAnimation.retargeting
     if (retargeting == null) {
       if (vrmAnimation.error != null) {
@@ -123,36 +144,27 @@ function Renderer({
     for (const warning of retargeting.compatibility.warnings) {
       console.log(`VRM compatibility warning ${modelLabel}: ${warning}`)
     }
-  }, [animationLabel, modelLabel, shouldRetarget, vrmAnimation.error, vrmAnimation.retargeting])
+  }, [animationLabel, modelLabel, vrmAnimation.error, vrmAnimation.retargeting])
 
   return (
-    <View style={styles.container}>
-      <FilamentView style={styles.filamentView}>
-        <Camera cameraPosition={[0, 0.25, -3]} cameraTarget={[0, 0, 0]} />
-        <DefaultLight />
-        {vrmModel.state === 'loaded' && (
-          <ModelRenderer model={vrmModel} transformToUnitCube>
-            {!shouldRetarget && <Animator />}
-          </ModelRenderer>
-        )}
-        {shouldRetarget && vrmModel.state === 'loaded' && vrmAnimation.sourceAsset != null && vrmAnimation.retargeting != null && (
-          <VRMAnimationRetargeter
-            sourceAsset={vrmAnimation.sourceAsset}
-            targetModel={vrmModel}
-            bindings={vrmAnimation.retargeting.bindings}
-            expressionBindings={vrmAnimation.retargeting.expressionBindings}
-            expressionMaterialColorBindings={vrmAnimation.retargeting.expressionMaterialColorBindings}
-            expressionTextureTransformBindings={vrmAnimation.retargeting.expressionTextureTransformBindings}
-            expressionOverrideBindings={vrmAnimation.retargeting.expressionOverrideBindings}
-            lookAtBoneBindings={vrmAnimation.retargeting.lookAtBoneBindings}
-            lookAtExpressionBindings={vrmAnimation.retargeting.lookAtExpressionBindings}
-            nodeConstraintBindings={vrmAnimation.retargeting.nodeConstraintBindings}
-            springBoneBindings={vrmAnimation.retargeting.springBoneBindings}
-            targetVersion={vrmAnimation.retargeting.targetVersion}
-          />
-        )}
-      </FilamentView>
-    </View>
+    <SceneContent model={vrmModel}>
+      {vrmModel.state === 'loaded' && vrmAnimation.sourceAsset != null && vrmAnimation.retargeting != null && (
+        <VRMAnimationRetargeter
+          sourceAsset={vrmAnimation.sourceAsset}
+          targetModel={vrmModel}
+          bindings={vrmAnimation.retargeting.bindings}
+          expressionBindings={vrmAnimation.retargeting.expressionBindings}
+          expressionMaterialColorBindings={vrmAnimation.retargeting.expressionMaterialColorBindings}
+          expressionTextureTransformBindings={vrmAnimation.retargeting.expressionTextureTransformBindings}
+          expressionOverrideBindings={vrmAnimation.retargeting.expressionOverrideBindings}
+          lookAtBoneBindings={vrmAnimation.retargeting.lookAtBoneBindings}
+          lookAtExpressionBindings={vrmAnimation.retargeting.lookAtExpressionBindings}
+          nodeConstraintBindings={vrmAnimation.retargeting.nodeConstraintBindings}
+          springBoneBindings={vrmAnimation.retargeting.springBoneBindings}
+          targetVersion={vrmAnimation.retargeting.targetVersion}
+        />
+      )}
+    </SceneContent>
   )
 }
 
@@ -184,6 +196,11 @@ function VRMTestPage({
     if (!isAutoCycleEnabled) return
 
     const interval = setInterval(() => {
+      if (mode === 'static') {
+        setAvatarIndex((currentAvatarIndex) => (currentAvatarIndex + 1) % avatars.length)
+        return
+      }
+
       setMotionIndex((currentMotionIndex) => {
         const nextMotionIndex = (currentMotionIndex + 1) % motions.length
         if (autoCycleAvatars && nextMotionIndex === 0) {
@@ -194,24 +211,30 @@ function VRMTestPage({
     }, AUTO_CYCLE_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [autoCycleAvatars, avatars.length, isAutoCycleEnabled, motions.length])
+  }, [autoCycleAvatars, avatars.length, isAutoCycleEnabled, mode, motions.length])
 
   return (
     <SafeAreaView style={styles.container}>
       <FilamentScene key={count}>
-        <Renderer
-          key={`${avatar.source}-${motion.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
-          animationLabel={motion.label}
-          animationSource={motion.source}
-          mode={mode}
-          modelLabel={avatar.label}
-          modelMetadataSource={avatar.source}
-          modelSource={modelFallback.source}
-        />
+        {mode === 'retarget' ? (
+          <RetargetRenderer
+            key={`${avatar.source}-${motion.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
+            animationLabel={motion.label}
+            animationSource={motion.source}
+            modelLabel={avatar.label}
+            modelMetadataSource={avatar.source}
+            modelSource={modelFallback.source}
+          />
+        ) : (
+          <StaticRenderer
+            key={`${avatar.source}-${typeof modelFallback.source === 'object' ? modelFallback.source.uri : modelFallback.source}`}
+            modelSource={modelFallback.source}
+          />
+        )}
       </FilamentScene>
       <View style={styles.selectionBar}>
         <Text style={styles.selectionText}>
-          {avatar.label} / {motion.label}
+          {mode === 'retarget' ? `${avatar.label} / ${motion.label}` : avatar.label}
         </Text>
       </View>
       <View style={styles.controls}>
